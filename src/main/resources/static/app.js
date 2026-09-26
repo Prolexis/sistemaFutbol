@@ -772,3 +772,487 @@ function escapeHtml(text) {
   div.innerText = String(text);
   return div.innerHTML;
 }
+
+// =====================================================================
+// 10. MÓDULO DE ESTADÍSTICAS Y DASHBOARD (NUEVO)
+// =====================================================================
+
+// Endpoints adicionales para estadísticas
+API.estadisticas = {
+  resumen: () => `${API_BASE}/estadisticas/resumen`,
+  equipoStats: (id) => `${API_BASE}/equipos/${id}/estadisticas`
+};
+
+let graficoGolesChartInstance = null;
+let statsEquiposCache = new Map();
+
+/**
+ * Calcula el badge de racha (🔥 positiva, ❄️ negativa, ➖ neutral)
+ * a partir de la lista de los últimos resultados (ej. ["G", "E", "P", "G", "G"]).
+ * 
+ * @param {Array<string>} racha Array con los últimos resultados
+ * @returns {Object} Objeto con emoji, texto, clase CSS y formato HTML
+ */
+function calcularBadgeRacha(racha) {
+  if (!racha || !Array.isArray(racha) || racha.length === 0) {
+    return {
+      emoji: '➖',
+      tipo: 'neutral',
+      texto: 'Sin partidos jugados aún',
+      clase: 'bg-slate-800 text-slate-400 border border-slate-700/60',
+      html: `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700/60 cursor-help" title="Sin encuentros disputados">➖</span>`
+    };
+  }
+
+  const victorias = racha.filter(r => r === 'G').length;
+  const derrotas = racha.filter(r => r === 'P').length;
+
+  if (victorias > derrotas) {
+    return {
+      emoji: '🔥',
+      tipo: 'positiva',
+      texto: `En racha positiva (${victorias}V / ${derrotas}D en últimos ${racha.length})`,
+      clase: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
+      html: `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 cursor-help" title="En racha positiva: ${racha.join(' - ')}">🔥</span>`
+    };
+  } else if (derrotas > victorias) {
+    return {
+      emoji: '❄️',
+      tipo: 'negativa',
+      texto: `En racha negativa (${derrotas}D / ${victorias}V en últimos ${racha.length})`,
+      clase: 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30',
+      html: `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 cursor-help" title="En racha negativa: ${racha.join(' - ')}">❄️</span>`
+    };
+  } else {
+    return {
+      emoji: '➖',
+      tipo: 'neutral',
+      texto: `Racha equilibrada (${victorias}V / ${derrotas}D en últimos ${racha.length})`,
+      clase: 'bg-slate-800 text-slate-300 border border-slate-700/60',
+      html: `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700/60 cursor-help" title="Racha neutral: ${racha.join(' - ')}">➖</span>`
+    };
+  }
+}
+
+/**
+ * Renderiza el gráfico de barras comparativo de Goles a Favor usando Chart.js
+ * 
+ * @param {Array<Object>} equiposStats Lista de estadísticas de equipos
+ */
+function renderGraficoGoles(equiposStats) {
+  const canvas = document.getElementById('graficoGolesFavorCanvas');
+  if (!canvas) return;
+
+  if (typeof Chart === 'undefined') {
+    console.warn('Chart.js aún no está disponible.');
+    return;
+  }
+
+  // Destruir instancia previa si existe para evitar superposiciones
+  if (graficoGolesChartInstance) {
+    graficoGolesChartInstance.destroy();
+  }
+
+  const ctx = canvas.getContext('2d');
+
+  // Preparar datos ordenados por goles a favor descendente
+  const obtenerGF = (e) => (e.GF ?? e.gf ?? e.golesAFavor ?? 0);
+  const obtenerGC = (e) => (e.GC ?? e.gc ?? e.golesEnContra ?? 0);
+  const datosOrdenados = [...equiposStats].sort((a, b) => obtenerGF(b) - obtenerGF(a));
+  const etiquetas = datosOrdenados.map(e => e.equipoNombre);
+  const valoresGF = datosOrdenados.map(e => obtenerGF(e));
+  const valoresGC = datosOrdenados.map(e => obtenerGC(e));
+
+  // Crear gradientes para las barras
+  const gradienteGF = ctx.createLinearGradient(0, 0, 0, 300);
+  gradienteGF.addColorStop(0, '#10b981'); // Emerald 500
+  gradienteGF.addColorStop(1, '#064e3b'); // Emerald 900
+
+  const gradienteGC = ctx.createLinearGradient(0, 0, 0, 300);
+  gradienteGC.addColorStop(0, '#f43f5e'); // Rose 500
+  gradienteGC.addColorStop(1, '#881337'); // Rose 900
+
+  graficoGolesChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: etiquetas,
+      datasets: [
+        {
+          label: 'Goles a Favor (GF)',
+          data: valoresGF,
+          backgroundColor: gradienteGF,
+          borderColor: '#34d399',
+          borderWidth: 1.5,
+          borderRadius: 8,
+          borderSkipped: false
+        },
+        {
+          label: 'Goles en Contra (GC)',
+          data: valoresGC,
+          backgroundColor: gradienteGC,
+          borderColor: '#fb7185',
+          borderWidth: 1.5,
+          borderRadius: 8,
+          borderSkipped: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            color: '#cbd5e1',
+            font: {
+              family: 'Outfit, sans-serif',
+              size: 13,
+              weight: '600'
+            },
+            usePointStyle: true,
+            pointStyle: 'circle',
+            padding: 20
+          }
+        },
+        tooltip: {
+          backgroundColor: '#0f172a',
+          titleColor: '#ffffff',
+          bodyColor: '#e2e8f0',
+          borderColor: '#334155',
+          borderWidth: 1,
+          padding: 12,
+          boxPadding: 6,
+          usePointStyle: true,
+          titleFont: {
+            family: 'Outfit, sans-serif',
+            weight: 'bold',
+            size: 14
+          },
+          bodyFont: {
+            family: 'Outfit, sans-serif',
+            size: 13
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            color: '#94a3b8',
+            font: {
+              family: 'Outfit, sans-serif',
+              size: 12,
+              weight: '500'
+            }
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(255, 255, 255, 0.05)',
+            lineWidth: 1
+          },
+          ticks: {
+            stepSize: 1,
+            color: '#94a3b8',
+            font: {
+              family: 'Chakra Petch, monospace',
+              size: 12
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Inyecta el badge de racha junto a cada equipo en la tabla de posiciones ya existente,
+ * sin romper su estructura HTML original.
+ * 
+ * @param {Array<Object>} equiposStats Lista de estadísticas de equipos
+ */
+function inyectarBadgesRachaEnTabla(equiposStats) {
+  const tbody = document.getElementById('tablaPosicionesBody');
+  if (!tbody) return;
+
+  const filas = tbody.querySelectorAll('tr');
+  if (!filas || filas.length === 0) return;
+
+  const mapaStats = new Map();
+  equiposStats.forEach(st => {
+    mapaStats.set(st.equipoId, st);
+    mapaStats.set(st.equipoNombre.trim().toLowerCase(), st);
+  });
+
+  filas.forEach((fila, idx) => {
+    // La celda 2 contiene el nombre del equipo: <td class="font-bold text-white flex items-center gap-2">
+    const celdaEquipo = fila.querySelector('td:nth-child(2)');
+    if (!celdaEquipo) return;
+
+    // Obtener el nombre del equipo
+    const spanNombre = celdaEquipo.querySelector('span:not(.w-8)');
+    if (!spanNombre) return;
+
+    const nombreTexto = spanNombre.textContent.trim().toLowerCase();
+    const st = mapaStats.get(nombreTexto);
+    if (!st) return;
+
+    const racha = st.racha || [];
+    const badgeObj = calcularBadgeRacha(racha);
+
+    // Evitar duplicar el badge si ya existe
+    let badgeExistente = celdaEquipo.querySelector('.badge-racha-tag');
+    if (!badgeExistente) {
+      const nuevoBadge = document.createElement('span');
+      nuevoBadge.className = `badge-racha-tag ms-1.5 transition-transform hover:scale-110`;
+      nuevoBadge.innerHTML = badgeObj.html;
+      celdaEquipo.appendChild(nuevoBadge);
+    } else {
+      badgeExistente.innerHTML = badgeObj.html;
+    }
+  });
+}
+
+/**
+ * Carga todos los datos del nuevo Dashboard:
+ * 1. Resumen general del torneo (/api/estadisticas/resumen)
+ * 2. Estadísticas individuales por equipo (/api/equipos + /api/equipos/{id}/estadisticas)
+ * 3. Renderiza tarjetas Tailwind, gráfico Chart.js y badges de racha en tabla de posiciones.
+ */
+async function cargarDashboard() {
+  try {
+    // 1. Obtener Resumen Global del Torneo
+    const resResumen = await fetch(API.estadisticas.resumen());
+    if (resResumen.ok) {
+      const resumen = await resResumen.json();
+
+      // Actualizar Tarjetas con Tailwind
+      const elTotalGoles = document.getElementById('statTotalGoles');
+      const elTotalPartidos = document.getElementById('statTotalPartidos');
+      const elPromedio = document.getElementById('statPromedioGoles');
+      const elGoleador = document.getElementById('statEquipoGoleador');
+      const elGolesLider = document.getElementById('statGolesLider');
+      const elMejorDefensa = document.getElementById('statMejorDefensa');
+      const elGolesDefensa = document.getElementById('statGolesDefensa');
+
+      if (elTotalGoles) elTotalGoles.textContent = resumen.totalGoles ?? 0;
+      if (elTotalPartidos) elTotalPartidos.textContent = `${resumen.totalPartidos ?? 0} partidos`;
+      if (elPromedio) elPromedio.textContent = Number(resumen.promedioGolesPorPartido ?? 0).toFixed(2);
+      if (elGoleador) elGoleador.textContent = resumen.equipoMasGoleador || '--';
+      if (elGolesLider) elGolesLider.textContent = `${resumen.golesEquipoMasGoleador ?? 0} goles a favor`;
+      if (elMejorDefensa) elMejorDefensa.textContent = resumen.equipoMejorDefensa || '--';
+      if (elGolesDefensa) elGolesDefensa.textContent = `${resumen.golesRecibidosMejorDefensa ?? 0} goles en contra`;
+    }
+
+    // 2. Obtener lista de equipos para consultar estadísticas individuales
+    let equipos = equiposCache;
+    if (!equipos || equipos.length === 0) {
+      const resEquipos = await fetch(API.equipos.listar());
+      if (resEquipos.ok) {
+        equipos = await resEquipos.json();
+        equiposCache = equipos;
+      }
+    }
+
+    if (!equipos || equipos.length === 0) return;
+
+    // 3. Consultar estadísticas de cada equipo en paralelo (/api/equipos/{id}/estadisticas)
+    const promesasStats = equipos.map(eq =>
+      fetch(API.estadisticas.equipoStats(eq.id))
+        .then(r => r.ok ? r.json() : null)
+        .catch(err => {
+          console.warn(`Error al consultar estadísticas para equipo ${eq.id}:`, err);
+          return null;
+        })
+    );
+
+    const resultadosStats = await Promise.all(promesasStats);
+    const statsValidas = resultadosStats.filter(st => st !== null);
+
+    // Guardar en caché
+    statsValidas.forEach(st => statsEquiposCache.set(st.equipoId, st));
+
+    // 4. Renderizar gráfico Chart.js
+    renderGraficoGoles(statsValidas);
+
+    // 5. Inyectar badges de racha en la tabla de posiciones
+    inyectarBadgesRachaEnTabla(statsValidas);
+
+    // 6. Renderizar panel detallado de rachas en el Dashboard
+    renderizarCardsRachas(statsValidas);
+
+  } catch (error) {
+    console.error('Error al cargar datos del dashboard:', error);
+  }
+}
+
+/**
+ * Renderiza cards detalladas de la racha de los últimos 5 resultados en el dashboard
+ * 
+ * @param {Array<Object>} listaStats Lista de estadísticas de equipos
+ */
+function renderizarCardsRachas(listaStats) {
+  const contenedor = document.getElementById('contenedorRachasDetalladas');
+  if (!contenedor) return;
+
+  contenedor.innerHTML = '';
+
+  if (!listaStats || listaStats.length === 0) {
+    contenedor.innerHTML = `<div class="col-span-full text-center text-slate-500 py-6 text-sm">No hay información de equipos disponible.</div>`;
+    return;
+  }
+
+  // Ordenar por puntos y diferencia de goles
+  const ordenados = [...listaStats].sort((a, b) => (b.puntos ?? 0) - (a.puntos ?? 0));
+
+  ordenados.forEach(item => {
+    const racha = item.racha || [];
+    const badgeObj = calcularBadgeRacha(racha);
+
+    // Construir círculos para cada partido de la racha
+    let rachaHtml = '';
+    if (racha.length === 0) {
+      rachaHtml = '<span class="text-xs text-slate-500 italic">Sin partidos disputados</span>';
+    } else {
+      rachaHtml = racha.map(res => {
+        if (res === 'G') {
+          return `<span class="w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-bold flex items-center justify-center" title="Victoria">G</span>`;
+        } else if (res === 'E') {
+          return `<span class="w-6 h-6 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/40 text-xs font-bold flex items-center justify-center" title="Empate">E</span>`;
+        } else {
+          return `<span class="w-6 h-6 rounded-md bg-rose-500/20 text-rose-400 border border-rose-500/40 text-xs font-bold flex items-center justify-center" title="Derrota">P</span>`;
+        }
+      }).join('');
+    }
+
+    const card = document.createElement('div');
+    card.className = 'bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 flex items-center justify-between gap-3 hover:border-slate-700 transition-colors';
+    card.innerHTML = `
+      <div class="flex items-center gap-3">
+        <span class="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-black text-emerald-400">
+          ${obtenerIniciales(item.equipoNombre)}
+        </span>
+        <div>
+          <div class="font-bold text-white text-sm flex items-center gap-2">
+            <span>${escapeHtml(item.equipoNombre)}</span>
+            <span class="text-base" title="${badgeObj.texto}">${badgeObj.emoji}</span>
+          </div>
+          <div class="text-xs text-slate-400 mt-0.5">
+            PJ: <b class="text-slate-300 font-score">${item.PJ ?? item.pj ?? item.partidosJugados ?? 0}</b> | 
+            PTS: <b class="text-emerald-400 font-score">${item.puntos ?? 0}</b> | 
+            GF: <b class="text-slate-300 font-score">${item.GF ?? item.gf ?? item.golesAFavor ?? 0}</b>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 flex-shrink-0">
+        ${rachaHtml}
+      </div>
+    `;
+    contenedor.appendChild(card);
+  });
+}
+
+// =====================================================================
+// 11. INICIALIZACIÓN DE EVENTOS DEL NUEVO MÓDULO DASHBOARD
+// =====================================================================
+document.addEventListener('DOMContentLoaded', () => {
+
+  // --- Al cambiar a la pestaña Dashboard: cargar datos y renderizar gráfico
+  //     Chart.js necesita que el canvas sea visible (dimensiones > 0) antes de renderizar.
+  //     Por eso llamamos a renderGraficoGoles dentro del evento shown.bs.tab.
+  const tabDashboardBtn = document.getElementById('tab-dashboard-btn');
+  if (tabDashboardBtn) {
+    tabDashboardBtn.addEventListener('shown.bs.tab', () => {
+      if (statsEquiposCache.size > 0) {
+        // Los datos ya están listos, solo re-renderizamos el gráfico ahora que el canvas es visible
+        requestAnimationFrame(() => {
+          renderGraficoGoles(Array.from(statsEquiposCache.values()));
+          renderizarCardsRachas(Array.from(statsEquiposCache.values()));
+        });
+      } else {
+        cargarDashboard();
+      }
+    });
+  }
+
+  // Listener para el botón de refrescar Dashboard
+  const btnRefrescarDashboard = document.getElementById('btnRefrescarDashboard');
+  if (btnRefrescarDashboard) {
+    btnRefrescarDashboard.addEventListener('click', async () => {
+      mostrarToast('Actualizando métricas del dashboard...', 'info');
+      statsEquiposCache.clear();
+      await cargarDashboard();
+      mostrarToast('Dashboard actualizado correctamente', 'success');
+    });
+  }
+
+  // Al mostrar la Tabla de Posiciones, inyectar badges si ya tenemos stats
+  const tabTablaBtn = document.getElementById('tab-tabla-btn');
+  if (tabTablaBtn) {
+    tabTablaBtn.addEventListener('shown.bs.tab', async () => {
+      if (statsEquiposCache.size > 0) {
+        inyectarBadgesRachaEnTabla(Array.from(statsEquiposCache.values()));
+      } else {
+        // Cargar estadísticas en background, sin bloquear
+        cargarDashboard();
+      }
+    });
+  }
+
+  // Pre-carga silenciosa del dashboard al iniciar la app:
+  // Obtiene datos y actualiza tarjetas + badges en la tabla, pero NO renderiza el
+  // gráfico aquí (el canvas está en una pestaña oculta y tendría dimensiones = 0).
+  setTimeout(async () => {
+    try {
+      const resResumen = await fetch(API.estadisticas.resumen());
+      if (resResumen.ok) {
+        const resumen = await resResumen.json();
+        const elTotalGoles = document.getElementById('statTotalGoles');
+        const elTotalPartidos = document.getElementById('statTotalPartidos');
+        const elPromedio = document.getElementById('statPromedioGoles');
+        const elGoleador = document.getElementById('statEquipoGoleador');
+        const elGolesLider = document.getElementById('statGolesLider');
+        const elMejorDefensa = document.getElementById('statMejorDefensa');
+        const elGolesDefensa = document.getElementById('statGolesDefensa');
+        if (elTotalGoles) elTotalGoles.textContent = resumen.totalGoles ?? 0;
+        if (elTotalPartidos) elTotalPartidos.textContent = `${resumen.totalPartidos ?? 0} partidos`;
+        if (elPromedio) elPromedio.textContent = Number(resumen.promedioGolesPorPartido ?? 0).toFixed(2);
+        if (elGoleador) elGoleador.textContent = resumen.equipoMasGoleador || '--';
+        if (elGolesLider) elGolesLider.textContent = `${resumen.golesEquipoMasGoleador ?? 0} goles a favor`;
+        if (elMejorDefensa) elMejorDefensa.textContent = resumen.equipoMejorDefensa || '--';
+        if (elGolesDefensa) elGolesDefensa.textContent = `${resumen.golesRecibidosMejorDefensa ?? 0} goles en contra`;
+      }
+
+      let equipos = equiposCache;
+      if (!equipos || equipos.length === 0) {
+        const resEquipos = await fetch(API.equipos.listar());
+        if (resEquipos.ok) { equipos = await resEquipos.json(); equiposCache = equipos; }
+      }
+      if (!equipos || equipos.length === 0) return;
+
+      const promesasStats = equipos.map(eq =>
+        fetch(API.estadisticas.equipoStats(eq.id))
+          .then(r => r.ok ? r.json() : null).catch(() => null)
+      );
+      const statsValidas = (await Promise.all(promesasStats)).filter(st => st !== null);
+      statsValidas.forEach(st => statsEquiposCache.set(st.equipoId, st));
+
+      // Inyectar badges en tabla de posiciones (visible desde el inicio)
+      inyectarBadgesRachaEnTabla(statsValidas);
+      // Precargar cards de rachas (están en el DOM pero ocultas)
+      renderizarCardsRachas(statsValidas);
+      // El gráfico NO se renderiza aquí, lo hará cuando se abra el tab Dashboard
+    } catch (e) {
+      console.warn('Pre-carga dashboard silenciosa falló:', e);
+    }
+  }, 600);
+});
+

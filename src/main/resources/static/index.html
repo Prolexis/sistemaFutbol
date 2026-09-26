@@ -208,6 +208,12 @@
                 <span>Equipos</span>
               </button>
             </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link flex items-center gap-2 text-sm" id="tab-dashboard-btn" data-bs-toggle="pill" data-bs-target="#tab-dashboard" type="button" role="tab">
+                <i class="bi bi-speedometer2"></i>
+                <span>Dashboard</span>
+              </button>
+            </li>
           </ul>
         </nav>
 
@@ -384,6 +390,126 @@
 
       </section>
 
+      <!-- =================================================================== -->
+      <!-- TAB 4: DASHBOARD & ESTADÍSTICAS -->
+      <!-- =================================================================== -->
+      <section class="tab-pane fade" id="tab-dashboard" role="tabpanel" aria-labelledby="tab-dashboard-btn">
+        <div id="seccion-dashboard">
+          
+          <!-- Header del Dashboard -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-800/80">
+            <div>
+              <div class="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
+                <i class="bi bi-graph-up-arrow"></i> Métricas &amp; Rendimiento
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Dashboard del Torneo</h2>
+              <p class="text-sm text-slate-400 m-0">Resumen general de estadísticas, líderes ofensivos/defensivos y comparativa de goles</p>
+            </div>
+            <div>
+              <button id="btnRefrescarDashboard" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/60 text-slate-300 hover:text-emerald-400 transition-colors text-xs font-semibold flex items-center gap-2">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar Métricas
+              </button>
+            </div>
+          </div>
+
+          <!-- Tarjetas con Tailwind mostrando el resumen del torneo -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <!-- Card 1: Goles Totales -->
+            <div class="bg-slate-900/80 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-xl relative overflow-hidden group hover:border-emerald-500/40 transition-all">
+              <div class="absolute -right-3 -top-3 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-all"></div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Total de Goles</span>
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-lg">
+                  ⚽
+                </div>
+              </div>
+              <div class="text-3xl font-extrabold text-white font-score" id="statTotalGoles">0</div>
+              <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                <span class="text-emerald-400 font-semibold" id="statTotalPartidos">0 partidos</span> disputados
+              </p>
+            </div>
+
+            <!-- Card 2: Promedio de Goles -->
+            <div class="bg-slate-900/80 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-xl relative overflow-hidden group hover:border-cyan-500/40 transition-all">
+              <div class="absolute -right-3 -top-3 w-20 h-20 bg-cyan-500/10 rounded-full blur-xl group-hover:bg-cyan-500/20 transition-all"></div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Promedio x Partido</span>
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-lg">
+                  <i class="bi bi-calculator"></i>
+                </div>
+              </div>
+              <div class="text-3xl font-extrabold text-white font-score" id="statPromedioGoles">0.0</div>
+              <p class="text-xs text-slate-400 mt-1">Goles convertidos por juego</p>
+            </div>
+
+            <!-- Card 3: Líder de Goleo -->
+            <div class="bg-slate-900/80 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-xl relative overflow-hidden group hover:border-amber-500/40 transition-all">
+              <div class="absolute -right-3 -top-3 w-20 h-20 bg-amber-500/10 rounded-full blur-xl group-hover:bg-amber-500/20 transition-all"></div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Líder de Goleo</span>
+                <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-lg">
+                  🔥
+                </div>
+              </div>
+              <div class="text-xl sm:text-2xl font-extrabold text-white truncate" id="statEquipoGoleador">--</div>
+              <p class="text-xs text-amber-400/90 mt-1 font-semibold" id="statGolesLider">0 goles a favor</p>
+            </div>
+
+            <!-- Card 4: Mejor Defensa -->
+            <div class="bg-slate-900/80 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-xl relative overflow-hidden group hover:border-indigo-500/40 transition-all">
+              <div class="absolute -right-3 -top-3 w-20 h-20 bg-indigo-500/10 rounded-full blur-xl group-hover:bg-indigo-500/20 transition-all"></div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Mejor Defensa</span>
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-lg">
+                  🛡️
+                </div>
+              </div>
+              <div class="text-xl sm:text-2xl font-extrabold text-white truncate" id="statMejorDefensa">--</div>
+              <p class="text-xs text-indigo-400/90 mt-1 font-semibold" id="statGolesDefensa">0 goles en contra</p>
+            </div>
+          </div>
+
+          <!-- Gráfico de Barras con Chart.js comparando goles a favor -->
+          <div class="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl p-6 mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                  <i class="bi bi-bar-chart-fill text-emerald-400"></i>
+                  Comparativa de Goles a Favor (GF) por Club
+                </h3>
+                <p class="text-xs text-slate-400 m-0">Producción ofensiva de todos los equipos en la liga</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Chart.js
+                </span>
+              </div>
+            </div>
+            <div class="relative w-full h-[340px] sm:h-[380px]">
+              <canvas id="graficoGolesFavorCanvas"></canvas>
+            </div>
+          </div>
+
+          <!-- Rachas y Formas de los Clubes -->
+          <div class="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl p-6">
+            <div class="mb-5 pb-3 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                  <i class="bi bi-activity text-amber-400"></i>
+                  Racha de los Últimos 5 Resultados por Club
+                </h3>
+                <p class="text-xs text-slate-400 m-0">🔥 Positiva (más victorias) | ❄️ Negativa (más derrotas) | ➖ Neutral</p>
+              </div>
+            </div>
+            <div id="contenedorRachasDetalladas" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <!-- Renderizado dinámico vía app.js -->
+            </div>
+          </div>
+
+        </div>
+      </section>
+
     </div>
   </main>
 
@@ -553,8 +679,11 @@
   <!-- 3. Bootstrap 5 JS Bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <!-- 4. Lógica Frontend ES6 Fetch API -->
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 
 </body>
 </html>
