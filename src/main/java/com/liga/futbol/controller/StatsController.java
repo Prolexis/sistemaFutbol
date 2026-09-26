@@ -4,6 +4,7 @@ import com.liga.futbol.dto.EstadisticaEquipoDTO;
 import com.liga.futbol.dto.ResumenTorneoDTO;
 import com.liga.futbol.service.StatsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,5 +34,18 @@ public class StatsController {
     public ResponseEntity<ResumenTorneoDTO> obtenerResumenTorneo() {
         ResumenTorneoDTO dto = statsService.obtenerResumenTorneo();
         return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * GET /api/estadisticas/posiciones/export/csv
+     * Genera y descarga un archivo CSV con la tabla de posiciones completa.
+     */
+    @GetMapping(value = "/estadisticas/posiciones/export/csv", produces = "text/csv")
+    public ResponseEntity<byte[]> exportarPosicionesCsv() {
+        byte[] csvBytes = statsService.exportarPosicionesCsv();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"posiciones.csv\"")
+                .header(HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
+                .body(csvBytes);
     }
 }

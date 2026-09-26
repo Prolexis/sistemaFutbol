@@ -4,14 +4,17 @@ import com.liga.futbol.dto.EstadisticaEquipoDTO;
 import com.liga.futbol.dto.ResumenTorneoDTO;
 import com.liga.futbol.entity.Encuentro;
 import com.liga.futbol.entity.Equipo;
-import com.liga.futbol.exception.ResourceNotFoundException;
+import com.liga.futbol.exception.RecursoNoEncontradoException;
 import com.liga.futbol.repository.EncuentroRepository;
 import com.liga.futbol.repository.EquipoRepository;
+import com.liga.futbol.dto.TablaPosicionDTO;
+import com.liga.futbol.service.EncuentroService;
 import com.liga.futbol.service.StatsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,11 +25,12 @@ public class StatsServiceImpl implements StatsService {
 
     private final EquipoRepository equipoRepository;
     private final EncuentroRepository encuentroRepository;
+    private final EncuentroService encuentroService;
 
     @Override
     public EstadisticaEquipoDTO obtenerEstadisticasEquipo(Long equipoId) {
         Equipo equipo = equipoRepository.findById(equipoId)
-                .orElseThrow(() -> new ResourceNotFoundException("Equipo no encontrado con ID: " + equipoId));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Equipo no encontrado con ID: " + equipoId));
 
         List<Encuentro> encuentros = encuentroRepository.findAll();
 
@@ -164,5 +168,43 @@ public class StatsServiceImpl implements StatsService {
                 .puntos(puntos)
                 .racha(ultimos5)
                 .build();
+    }
+
+    @Override
+    public byte[] exportarPosicionesCsv() {
+        List<TablaPosicionDTO> posiciones = encuentroService.obtenerTablaPosiciones();
+        StringBuilder sb = new StringBuilder();
+
+        // BOM UTF-8 para garantizar codificación adecuada en editores y Excel
+        sb.append('\ufeff');
+
+        // Encabezado según requerimiento: Puesto,Equipo,Ciudad,PJ,PG,PE,PP,GF,GC,DIF,Puntos
+        sb.append("Puesto,Equipo,Ciudad,PJ,PG,PE,PP,GF,GC,DIF,Puntos\n");
+
+        for (TablaPosicionDTO pos : posiciones) {
+            sb.append(pos.getPosicion() != null ? pos.getPosicion() : "").append(",");
+            sb.append(escapeCsv(pos.getEquipoNombre())).append(",");
+            sb.append(escapeCsv(pos.getCiudad())).append(",");
+            sb.append(pos.getPartidosJugados() != null ? pos.getPartidosJugados() : 0).append(",");
+            sb.append(pos.getPartidosGanados() != null ? pos.getPartidosGanados() : 0).append(",");
+            sb.append(pos.getPartidosEmpatados() != null ? pos.getPartidosEmpatados() : 0).append(",");
+            sb.append(pos.getPartidosPerdidos() != null ? pos.getPartidosPerdidos() : 0).append(",");
+            sb.append(pos.getGolesAFavor() != null ? pos.getGolesAFavor() : 0).append(",");
+            sb.append(pos.getGolesEnContra() != null ? pos.getGolesEnContra() : 0).append(",");
+            sb.append(pos.getDiferenciaGoles() != null ? pos.getDiferenciaGoles() : 0).append(",");
+            sb.append(pos.getPuntos() != null ? pos.getPuntos() : 0).append("\n");
+        }
+
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private String escapeCsv(String valor) {
+        if (valor == null) {
+            return "\"\"";
+        }
+        if (valor.contains(",") || valor.contains("\"") || valor.contains("\n") || valor.contains("\r")) {
+            return "\"" + valor.replace("\"", "\"\"") + "\"";
+        }
+        return "\"" + valor + "\"";
     }
 }

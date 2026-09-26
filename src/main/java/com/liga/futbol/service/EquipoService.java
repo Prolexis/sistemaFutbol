@@ -10,4 +10,7 @@ public interface EquipoService {
     EquipoDTO obtenerEquipoPorId(Long id);
     EquipoDTO actualizarEquipo(Long id, EquipoDTO equipoDTO);
     void eliminarEquipo(Long id);
+
+    /** Nuevo: búsqueda parcial por nombre */
+    List<EquipoDTO> buscarPorNombre(String nombre);
 }

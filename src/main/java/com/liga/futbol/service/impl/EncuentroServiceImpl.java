@@ -6,8 +6,8 @@ import com.liga.futbol.dto.EquipoDTO;
 import com.liga.futbol.dto.TablaPosicionDTO;
 import com.liga.futbol.entity.Encuentro;
 import com.liga.futbol.entity.Equipo;
-import com.liga.futbol.exception.BusinessRuleException;
-import com.liga.futbol.exception.ResourceNotFoundException;
+import com.liga.futbol.exception.RecursoNoEncontradoException;
+import com.liga.futbol.exception.ReglaDeNegocioException;
 import com.liga.futbol.repository.EncuentroRepository;
 import com.liga.futbol.repository.EquipoRepository;
 import com.liga.futbol.service.EncuentroService;
@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.time.LocalDate;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,10 +32,10 @@ public class EncuentroServiceImpl implements EncuentroService {
         validarReglasEncuentro(request);
 
         Equipo local = equipoRepository.findById(request.getEquipoLocalId())
-                .orElseThrow(() -> new ResourceNotFoundException("El equipo local con ID " + request.getEquipoLocalId() + " no existe."));
+                .orElseThrow(() -> new RecursoNoEncontradoException("El equipo local con ID " + request.getEquipoLocalId() + " no existe."));
 
         Equipo visitante = equipoRepository.findById(request.getEquipoVisitanteId())
-                .orElseThrow(() -> new ResourceNotFoundException("El equipo visitante con ID " + request.getEquipoVisitanteId() + " no existe."));
+                .orElseThrow(() -> new RecursoNoEncontradoException("El equipo visitante con ID " + request.getEquipoVisitanteId() + " no existe."));
 
         Encuentro encuentro = Encuentro.builder()
                 .equipoLocal(local)
@@ -60,22 +61,22 @@ public class EncuentroServiceImpl implements EncuentroService {
     @Transactional(readOnly = true)
     public EncuentroResponseDTO obtenerEncuentroPorId(Long id) {
         Encuentro encuentro = encuentroRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el encuentro con ID: " + id));
+                .orElseThrow(() -> new RecursoNoEncontradoException("No se encontró el encuentro con ID: " + id));
         return mapToResponseDTO(encuentro);
     }
 
     @Override
     public EncuentroResponseDTO actualizarEncuentro(Long id, EncuentroRequestDTO request) {
         Encuentro encuentro = encuentroRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el encuentro con ID: " + id));
+                .orElseThrow(() -> new RecursoNoEncontradoException("No se encontró el encuentro con ID: " + id));
 
         validarReglasEncuentro(request);
 
         Equipo local = equipoRepository.findById(request.getEquipoLocalId())
-                .orElseThrow(() -> new ResourceNotFoundException("El equipo local con ID " + request.getEquipoLocalId() + " no existe."));
+                .orElseThrow(() -> new RecursoNoEncontradoException("El equipo local con ID " + request.getEquipoLocalId() + " no existe."));
 
         Equipo visitante = equipoRepository.findById(request.getEquipoVisitanteId())
-                .orElseThrow(() -> new ResourceNotFoundException("El equipo visitante con ID " + request.getEquipoVisitanteId() + " no existe."));
+                .orElseThrow(() -> new RecursoNoEncontradoException("El equipo visitante con ID " + request.getEquipoVisitanteId() + " no existe."));
 
         encuentro.setEquipoLocal(local);
         encuentro.setEquipoVisitante(visitante);
@@ -90,7 +91,7 @@ public class EncuentroServiceImpl implements EncuentroService {
     @Override
     public void eliminarEncuentro(Long id) {
         if (!encuentroRepository.existsById(id)) {
-            throw new ResourceNotFoundException("No se encontró el encuentro con ID: " + id);
+            throw new RecursoNoEncontradoException("No se encontró el encuentro con ID: " + id);
         }
         encuentroRepository.deleteById(id);
     }
@@ -189,25 +190,56 @@ public class EncuentroServiceImpl implements EncuentroService {
         return clasificacion;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<EncuentroResponseDTO> listarEncuentrosFiltrados(Long equipoId, LocalDate fechaInicio, LocalDate fechaFin) {
+        List<Encuentro> encuentros;
+
+        boolean tieneEquipo = equipoId != null;
+        boolean tieneFechas = fechaInicio != null && fechaFin != null;
+
+        if (tieneEquipo && tieneFechas) {
+            encuentros = encuentroRepository.findByEquipoIdAndFechaBetween(equipoId, fechaInicio, fechaFin);
+        } else if (tieneEquipo) {
+            encuentros = encuentroRepository.findByEquipoLocalIdOrEquipoVisitanteIdOrderByFechaDescIdDesc(equipoId, equipoId);
+        } else if (tieneFechas) {
+            encuentros = encuentroRepository.findByFechaBetweenOrderByFechaDescIdDesc(fechaInicio, fechaFin);
+        } else {
+            encuentros = encuentroRepository.findAllByOrderByFechaDescIdDesc();
+        }
+
+        return encuentros.stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EncuentroResponseDTO> obtenerEncuentrosRecientes() {
+        return encuentroRepository.findTop5ByOrderByIdDesc().stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
     private void validarReglasEncuentro(EncuentroRequestDTO request) {
         if (request.getEquipoLocalId() == null || request.getEquipoVisitanteId() == null) {
-            throw new BusinessRuleException("Debe seleccionar tanto el equipo local como el equipo visitante.");
+            throw new ReglaDeNegocioException("Debe seleccionar tanto el equipo local como el equipo visitante.");
         }
 
         if (request.getEquipoLocalId().equals(request.getEquipoVisitanteId())) {
-            throw new BusinessRuleException("Un equipo no puede enfrentarse a sí mismo.");
+            throw new ReglaDeNegocioException("Un equipo no puede enfrentarse a sí mismo.");
         }
 
         if (request.getGolesLocal() == null || request.getGolesLocal() < 0) {
-            throw new BusinessRuleException("Los goles del equipo local deben ser mayores o iguales a 0.");
+            throw new ReglaDeNegocioException("Los goles del equipo local deben ser mayores o iguales a 0.");
         }
 
         if (request.getGolesVisitante() == null || request.getGolesVisitante() < 0) {
-            throw new BusinessRuleException("Los goles del equipo visitante deben ser mayores o iguales a 0.");
+            throw new ReglaDeNegocioException("Los goles del equipo visitante deben ser mayores o iguales a 0.");
         }
 
         if (request.getFecha() == null) {
-            throw new BusinessRuleException("La fecha del encuentro es obligatoria.");
+            throw new ReglaDeNegocioException("La fecha del encuentro es obligatoria.");
         }
     }
 

@@ -17,4 +17,7 @@ public interface EquipoRepository extends JpaRepository<Equipo, Long> {
     Optional<Equipo> findByNombreIgnoreCase(String nombre);
 
     List<Equipo> findAllByOrderByNombreAsc();
+
+    // Búsqueda parcial por nombre, insensible a mayúsculas (usado por /api/equipos/buscar)
+    List<Equipo> findByNombreContainingIgnoreCase(String nombre);
 }

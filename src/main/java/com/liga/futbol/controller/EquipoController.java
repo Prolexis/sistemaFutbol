@@ -43,4 +43,14 @@ public class EquipoController {
         equipoService.eliminarEquipo(id);
         return ResponseEntity.noContent().build();
     }
+
+    /** Nuevo: búsqueda parcial de equipos por nombre */
+    @GetMapping("/buscar")
+    public ResponseEntity<List<EquipoDTO>> buscarEquiposPorNombre(
+            @RequestParam(defaultValue = "") String nombre) {
+        if (nombre.isBlank()) {
+            return ResponseEntity.ok(equipoService.listarEquipos());
+        }
+        return ResponseEntity.ok(equipoService.buscarPorNombre(nombre));
+    }
 }

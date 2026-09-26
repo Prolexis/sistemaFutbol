@@ -6,10 +6,12 @@ import com.liga.futbol.dto.TablaPosicionDTO;
 import com.liga.futbol.service.EncuentroService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -26,13 +28,31 @@ public class EncuentroController {
     }
 
     @GetMapping
-    public ResponseEntity<List<EncuentroResponseDTO>> listarEncuentros() {
-        return ResponseEntity.ok(encuentroService.listarEncuentros());
+    public ResponseEntity<List<EncuentroResponseDTO>> listarEncuentros(
+            @RequestParam(required = false) Long equipoId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
+
+        // Si no se envía ningún filtro, comportamiento idéntico al original
+        boolean sinFiltros = equipoId == null && fechaInicio == null && fechaFin == null;
+        if (sinFiltros) {
+            return ResponseEntity.ok(encuentroService.listarEncuentros());
+        }
+        return ResponseEntity.ok(encuentroService.listarEncuentrosFiltrados(equipoId, fechaInicio, fechaFin));
     }
 
     @GetMapping("/tabla-posiciones")
     public ResponseEntity<List<TablaPosicionDTO>> obtenerTablaPosiciones() {
         return ResponseEntity.ok(encuentroService.obtenerTablaPosiciones());
+    }
+
+    /**
+     * GET /api/encuentros/recientes
+     * Devuelve los últimos 5 encuentros registrados, ordenados descendentemente.
+     */
+    @GetMapping("/recientes")
+    public ResponseEntity<List<EncuentroResponseDTO>> obtenerEncuentrosRecientes() {
+        return ResponseEntity.ok(encuentroService.obtenerEncuentrosRecientes());
     }
 
     @GetMapping("/{id}")

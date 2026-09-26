@@ -14,4 +14,9 @@ public interface StatsService {
      * Obtiene el resumen global del torneo (goles totales, promedio, líder de goleo, mejor defensa).
      */
     ResumenTorneoDTO obtenerResumenTorneo();
+
+    /**
+     * Genera el contenido en bytes del archivo CSV con la tabla de posiciones completa.
+     */
+    byte[] exportarPosicionesCsv();
 }

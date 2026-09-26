@@ -1,7 +1,7 @@
 /**
- * Liga Futbol Pro — Frontend ES6 Application
- * Consume los 11 endpoints REST de Spring Boot usando fetch API.
- * Gestiona Modales, Toasts, Tabla de Posiciones, Encuentros y Equipos.
+ * Liga Fútbol — Frontend ES6 Application
+ * Consume los endpoints REST de Spring Boot usando fetch API.
+ * Gestiona Modales, Toasts, Tabla de Posiciones, Encuentros, Equipos y Estadísticas.
  */
 
 // =====================================================================
@@ -15,14 +15,22 @@ const API = {
     obtenerPorId: (id) => `${API_BASE}/equipos/${id}`,        // GET /api/equipos/{id}
     actualizar: (id) => `${API_BASE}/equipos/${id}`,          // PUT /api/equipos/{id}
     eliminar: (id) => `${API_BASE}/equipos/${id}`,            // DELETE /api/equipos/{id}
+    buscar: (nombre) => `${API_BASE}/equipos/buscar?nombre=${encodeURIComponent(nombre)}`, // GET /api/equipos/buscar
   },
   encuentros: {
     listar: () => `${API_BASE}/encuentros`,                   // GET /api/encuentros
+    listarFiltrado: (params) => `${API_BASE}/encuentros?${params}`, // GET /api/encuentros?filtros
     crear: () => `${API_BASE}/encuentros`,                    // POST /api/encuentros
     obtenerPorId: (id) => `${API_BASE}/encuentros/${id}`,     // GET /api/encuentros/{id}
     actualizar: (id) => `${API_BASE}/encuentros/${id}`,       // PUT /api/encuentros/{id}
     eliminar: (id) => `${API_BASE}/encuentros/${id}`,         // DELETE /api/encuentros/{id}
-    tablaPosiciones: () => `${API_BASE}/encuentros/tabla-posiciones` // GET /api/encuentros/tabla-posiciones
+    tablaPosiciones: () => `${API_BASE}/encuentros/tabla-posiciones`, // GET /api/encuentros/tabla-posiciones
+    recientes: () => `${API_BASE}/encuentros/recientes`       // GET /api/encuentros/recientes
+  },
+  estadisticas: {
+    exportarCsv: () => `${API_BASE}/estadisticas/posiciones/export/csv`, // GET /api/estadisticas/posiciones/export/csv
+    resumen: () => `${API_BASE}/estadisticas/resumen`,
+    equipoStats: (id) => `${API_BASE}/equipos/${id}/estadisticas`
   }
 };
 
@@ -39,24 +47,35 @@ let modalEquipoBS = null;
 let modalEncuentroBS = null;
 let modalEliminarBS = null;
 
+let graficoGolesChartInstance = null;
+let statsEquiposCache = new Map();
+
 // =====================================================================
 // 3. INICIALIZACIÓN AL CARGAR EL DOM
 // =====================================================================
 document.addEventListener('DOMContentLoaded', () => {
-  // Inicializar componentes de Bootstrap
-  modalEquipoBS = new bootstrap.Modal(document.getElementById('modalEquipo'));
-  modalEncuentroBS = new bootstrap.Modal(document.getElementById('modalEncuentro'));
-  modalEliminarBS = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
+  // Inicializar modales Bootstrap
+  const elModalEquipo = document.getElementById('modalEquipo');
+  const elModalEncuentro = document.getElementById('modalEncuentro');
+  const elModalEliminar = document.getElementById('modalConfirmarEliminar');
 
-  // Registrar listeners de formularios
-  document.getElementById('formEquipo').addEventListener('submit', manejarSubmitEquipo);
-  document.getElementById('formEncuentro').addEventListener('submit', manejarSubmitEncuentro);
+  if (elModalEquipo) modalEquipoBS = new bootstrap.Modal(elModalEquipo);
+  if (elModalEncuentro) modalEncuentroBS = new bootstrap.Modal(elModalEncuentro);
+  if (elModalEliminar) modalEliminarBS = new bootstrap.Modal(elModalEliminar);
 
-  // Botones de apertura de modales
-  document.getElementById('btnAbrirModalEquipo').addEventListener('click', abrirModalNuevoEquipo);
-  document.getElementById('btnAbrirModalEncuentro').addEventListener('click', abrirModalNuevoEncuentro);
+  // Formularios
+  const formEquipo = document.getElementById('formEquipo');
+  const formEncuentro = document.getElementById('formEncuentro');
+  if (formEquipo) formEquipo.addEventListener('submit', manejarSubmitEquipo);
+  if (formEncuentro) formEncuentro.addEventListener('submit', manejarSubmitEncuentro);
 
-  // Botones de llamada a la acción en estados vacíos
+  // Botones de apertura
+  const btnAbrirEquipo = document.getElementById('btnAbrirModalEquipo');
+  const btnAbrirEncuentro = document.getElementById('btnAbrirModalEncuentro');
+  if (btnAbrirEquipo) btnAbrirEquipo.addEventListener('click', abrirModalNuevoEquipo);
+  if (btnAbrirEncuentro) btnAbrirEncuentro.addEventListener('click', abrirModalNuevoEncuentro);
+
+  // Acciones en estados vacíos
   document.querySelectorAll('.btnCrearPrimerEquipo').forEach(btn => {
     btn.addEventListener('click', abrirModalNuevoEquipo);
   });
@@ -64,23 +83,29 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', abrirModalNuevoEncuentro);
   });
 
-  // Botón de refresco global
-  document.getElementById('btnRefrescarTodo').addEventListener('click', async () => {
-    mostrarToast('Actualizando datos...', 'info');
-    await cargarTodosLosDatos();
-    mostrarToast('Datos sincronizados correctamente', 'success');
-  });
+  // Botón refresco global
+  const btnRefrescarTodo = document.getElementById('btnRefrescarTodo');
+  if (btnRefrescarTodo) {
+    btnRefrescarTodo.addEventListener('click', async () => {
+      mostrarToast('Sincronizando datos...', 'info');
+      await cargarTodosLosDatos();
+      mostrarToast('Datos actualizados', 'success');
+    });
+  }
 
-  // Botón de confirmación de eliminación
-  document.getElementById('btnConfirmarEliminacionAccion').addEventListener('click', async () => {
-    if (typeof accionAEliminar === 'function') {
-      await accionAEliminar();
-      modalEliminarBS.hide();
-      accionAEliminar = null;
-    }
-  });
+  // Confirmar eliminación
+  const btnConfirmarEliminar = document.getElementById('btnConfirmarEliminacionAccion');
+  if (btnConfirmarEliminar) {
+    btnConfirmarEliminar.addEventListener('click', async () => {
+      if (typeof accionAEliminar === 'function') {
+        await accionAEliminar();
+        if (modalEliminarBS) modalEliminarBS.hide();
+        accionAEliminar = null;
+      }
+    });
+  }
 
-  // Recarga automática al cambiar de pestaña en Bootstrap
+  // Recarga al cambiar de pestaña
   const tabElements = document.querySelectorAll('button[data-bs-toggle="pill"]');
   tabElements.forEach(tabEl => {
     tabEl.addEventListener('shown.bs.tab', (event) => {
@@ -91,27 +116,81 @@ document.addEventListener('DOMContentLoaded', () => {
         cargarEncuentros();
       } else if (targetId === '#tab-equipos') {
         cargarEquipos();
+      } else if (targetId === '#tab-dashboard') {
+        if (statsEquiposCache.size > 0) {
+          requestAnimationFrame(() => {
+            renderGraficoGoles(Array.from(statsEquiposCache.values()));
+            renderizarCardsRachas(Array.from(statsEquiposCache.values()));
+          });
+        } else {
+          cargarDashboard();
+        }
       }
     });
   });
 
-  // Validación dinámica en formulario de encuentros: evitar mismo equipo
+  // Validación dinámica en formulario de partidos: evitar mismo equipo
   const selLocal = document.getElementById('selectEquipoLocal');
   const selVisitante = document.getElementById('selectEquipoVisitante');
   const alertaMismo = document.getElementById('alertaMismoEquipo');
 
   function verificarEquiposIguales() {
-    if (selLocal.value && selVisitante.value && selLocal.value === selVisitante.value) {
-      alertaMismo.classList.remove('hidden');
-    } else {
-      alertaMismo.classList.add('hidden');
+    if (selLocal && selVisitante && alertaMismo) {
+      if (selLocal.value && selVisitante.value && selLocal.value === selVisitante.value) {
+        alertaMismo.classList.remove('hidden');
+      } else {
+        alertaMismo.classList.add('hidden');
+      }
     }
   }
 
-  selLocal.addEventListener('change', verificarEquiposIguales);
-  selVisitante.addEventListener('change', verificarEquiposIguales);
+  if (selLocal) selLocal.addEventListener('change', verificarEquiposIguales);
+  if (selVisitante) selVisitante.addEventListener('change', verificarEquiposIguales);
 
-  // Carga inicial
+  // Búsqueda en vivo de equipos (debounce 250ms)
+  let debounceEquiposTimer = null;
+  const inputBuscar = document.getElementById('inputBuscarEquipo');
+  if (inputBuscar) {
+    inputBuscar.addEventListener('input', (e) => {
+      clearTimeout(debounceEquiposTimer);
+      debounceEquiposTimer = setTimeout(() => {
+        filtrarEquipos(e.target.value);
+      }, 250);
+    });
+  }
+
+  // Filtros de encuentros
+  const btnFiltrarEncuentros = document.getElementById('btnFiltrarEncuentrosFecha');
+  if (btnFiltrarEncuentros) {
+    btnFiltrarEncuentros.addEventListener('click', filtrarEncuentrosPorFecha);
+  }
+  const btnLimpiarEncuentros = document.getElementById('btnLimpiarFiltroEncuentros');
+  if (btnLimpiarEncuentros) {
+    btnLimpiarEncuentros.addEventListener('click', limpiarFiltroEncuentros);
+  }
+
+  // Exportar PDF y CSV
+  const btnExportarPdf = document.getElementById('btnExportarPosicionesPDF');
+  if (btnExportarPdf) {
+    btnExportarPdf.addEventListener('click', exportarPosicionesPDF);
+  }
+  const btnExportarCsv = document.getElementById('btnExportarPosicionesCSV');
+  if (btnExportarCsv) {
+    btnExportarCsv.addEventListener('click', exportarPosicionesCSV);
+  }
+
+  // Botón refresco Dashboard
+  const btnRefrescarDashboard = document.getElementById('btnRefrescarDashboard');
+  if (btnRefrescarDashboard) {
+    btnRefrescarDashboard.addEventListener('click', async () => {
+      mostrarToast('Actualizando estadísticas...', 'info');
+      statsEquiposCache.clear();
+      await cargarDashboard();
+      mostrarToast('Estadísticas actualizadas', 'success');
+    });
+  }
+
+  // Carga inicial de datos
   cargarTodosLosDatos();
 });
 
@@ -127,15 +206,17 @@ async function cargarTodosLosDatos() {
       cargarEncuentros(),
       cargarEquipos()
     ]);
+    // Pre-cargar stats en background silenciosamente
+    cargarDashboardSilencioso();
   } catch (error) {
-    console.error('Error al sincronizar datos generales:', error);
+    console.error('Error al sincronizar datos:', error);
   } finally {
     mostrarLoading(false);
   }
 }
 
 /**
- * 11. GET /api/encuentros/tabla-posiciones
+ * GET /api/encuentros/tabla-posiciones
  */
 async function cargarTablaPosiciones() {
   try {
@@ -145,12 +226,12 @@ async function cargarTablaPosiciones() {
     tablaPosicionesCache = data;
     renderizarTablaPosiciones(data);
   } catch (error) {
-    mostrarToast(`Error al cargar tabla de posiciones: ${error.message}`, 'error');
+    mostrarToast(`Error al cargar posiciones: ${error.message}`, 'error');
   }
 }
 
 /**
- * 2. GET /api/equipos
+ * GET /api/equipos
  */
 async function cargarEquipos() {
   try {
@@ -166,7 +247,7 @@ async function cargarEquipos() {
 }
 
 /**
- * 7. GET /api/encuentros
+ * GET /api/encuentros
  */
 async function cargarEncuentros() {
   try {
@@ -185,17 +266,18 @@ async function cargarEncuentros() {
 // =====================================================================
 
 /**
- * Renderiza la Tabla de Posiciones estilo Scoreboard Profesional
+ * Renderiza la Tabla de Posiciones estilo UEFA / Premier League
  */
 function renderizarTablaPosiciones(lista) {
   const tbody = document.getElementById('tablaPosicionesBody');
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   if (!lista || lista.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="11" class="text-center py-8 text-slate-500">
-          <i class="bi bi-info-circle me-1"></i> Aún no hay equipos registrados para calcular la tabla.
+        <td colspan="11" class="text-center py-8 text-slate-400 text-xs">
+          Aún no hay equipos registrados para calcular la tabla.
         </td>
       </tr>
     `;
@@ -206,51 +288,51 @@ function renderizarTablaPosiciones(lista) {
     const tr = document.createElement('tr');
     tr.className = 'transition-colors';
 
-    // Clases especiales de medalla para los primeros 3 puestos
+    // Medalla sutil para los primeros 3 puestos
     let badgePosicion = '';
     if (item.posicion === 1) {
       tr.classList.add('row-oro');
-      badgePosicion = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-yellow-500/20 text-yellow-400 font-black border border-yellow-500/40">1 👑</span>`;
+      badgePosicion = `<span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-amber-50 text-amber-700 font-bold border border-amber-200 text-xs">1</span>`;
     } else if (item.posicion === 2) {
       tr.classList.add('row-plata');
-      badgePosicion = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-400/20 text-slate-200 font-bold border border-slate-400/40">2 🥈</span>`;
+      badgePosicion = `<span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200 text-xs">2</span>`;
     } else if (item.posicion === 3) {
       tr.classList.add('row-bronce');
-      badgePosicion = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-amber-700/20 text-amber-400 font-bold border border-amber-600/40">3 🥉</span>`;
+      badgePosicion = `<span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-orange-50 text-orange-700 font-bold border border-orange-200 text-xs">3</span>`;
     } else {
-      badgePosicion = `<span class="inline-block text-slate-400 font-semibold">${item.posicion}</span>`;
+      badgePosicion = `<span class="text-slate-400 font-medium text-xs">${item.posicion}</span>`;
     }
 
-    // Diferencia de goles formateada con signo + o -
-    let dgClass = 'text-slate-400';
+    // Diferencia de goles
+    let dgClass = 'text-slate-500 font-medium';
     let dgDisplay = item.diferenciaGoles;
     if (item.diferenciaGoles > 0) {
-      dgClass = 'text-emerald-400 font-bold';
+      dgClass = 'text-emerald-700 font-semibold';
       dgDisplay = `+${item.diferenciaGoles}`;
     } else if (item.diferenciaGoles < 0) {
-      dgClass = 'text-rose-400 font-bold';
+      dgClass = 'text-rose-600 font-semibold';
     }
 
     tr.innerHTML = `
-      <td class="text-center font-score">${badgePosicion}</td>
-      <td class="font-bold text-white flex items-center gap-2">
-        <span class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-black text-emerald-400">
+      <td class="text-center tabular-nums">${badgePosicion}</td>
+      <td class="font-bold text-slate-900 flex items-center gap-2.5">
+        <span class="w-7 h-7 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-semibold text-slate-700">
           ${obtenerIniciales(item.equipoNombre)}
         </span>
-        <span>${escapeHtml(item.equipoNombre)}</span>
+        <span class="truncate max-w-[180px] sm:max-w-none">${escapeHtml(item.equipoNombre)}</span>
       </td>
-      <td class="hidden sm:table-cell text-slate-400 text-xs">
-        <i class="bi bi-geo-alt text-emerald-400/70 me-1"></i>${escapeHtml(item.ciudad)}
+      <td class="hidden sm:table-cell text-slate-500 text-xs">
+        ${escapeHtml(item.ciudad)}
       </td>
-      <td class="text-center font-score text-slate-300 font-semibold">${item.partidosJugados}</td>
-      <td class="text-center font-score text-emerald-400 font-semibold">${item.partidosGanados}</td>
-      <td class="text-center font-score text-amber-400 font-semibold">${item.partidosEmpatados}</td>
-      <td class="text-center font-score text-rose-400 font-semibold">${item.partidosPerdidos}</td>
-      <td class="text-center font-score hidden md:table-cell text-slate-400">${item.golesAFavor}</td>
-      <td class="text-center font-score hidden md:table-cell text-slate-400">${item.golesEnContra}</td>
-      <td class="text-center font-score ${dgClass}">${dgDisplay}</td>
-      <td class="text-center font-score text-base font-extrabold text-white">
-        <span class="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+      <td class="text-center tabular-nums text-slate-600 font-medium">${item.partidosJugados}</td>
+      <td class="text-center tabular-nums text-slate-700 font-medium">${item.partidosGanados}</td>
+      <td class="text-center tabular-nums text-slate-700 font-medium">${item.partidosEmpatados}</td>
+      <td class="text-center tabular-nums text-slate-700 font-medium">${item.partidosPerdidos}</td>
+      <td class="text-center tabular-nums hidden md:table-cell text-slate-500">${item.golesAFavor}</td>
+      <td class="text-center tabular-nums hidden md:table-cell text-slate-500">${item.golesEnContra}</td>
+      <td class="text-center tabular-nums ${dgClass}">${dgDisplay}</td>
+      <td class="text-center tabular-nums text-sm font-extrabold text-slate-900">
+        <span class="inline-block px-2.5 py-0.5 rounded bg-slate-100 text-slate-900 font-bold">
           ${item.puntos}
         </span>
       </td>
@@ -260,50 +342,51 @@ function renderizarTablaPosiciones(lista) {
 }
 
 /**
- * Renderiza el listado de Equipos en Cards con Tailwind CSS
+ * Renderiza el listado de Equipos en Cards limpias
  */
 function renderizarEquipos(lista) {
   const container = document.getElementById('listaEquiposContainer');
   const sinEquiposMsg = document.getElementById('sinEquiposMsg');
+  if (!container) return;
   container.innerHTML = '';
 
   if (!lista || lista.length === 0) {
-    sinEquiposMsg.classList.remove('hidden');
+    if (sinEquiposMsg) sinEquiposMsg.classList.remove('hidden');
     return;
   }
-  sinEquiposMsg.classList.add('hidden');
+  if (sinEquiposMsg) sinEquiposMsg.classList.add('hidden');
 
   lista.forEach(equipo => {
     const card = document.createElement('div');
-    card.className = 'group bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 p-5 shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-500/40 transition-all duration-300 hover:scale-[1.02] flex flex-col justify-between';
+    card.className = 'bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-colors flex flex-col justify-between';
 
     card.innerHTML = `
       <div>
-        <div class="flex items-start justify-between gap-3 mb-4">
-          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500/20 to-teal-400/20 border border-emerald-500/30 flex items-center justify-center font-extrabold text-emerald-400 text-lg shadow-sm">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-800 text-sm">
             ${obtenerIniciales(equipo.nombre)}
           </div>
-          <span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 flex items-center gap-1">
-            <i class="bi bi-tag"></i> ID: ${equipo.id}
+          <span class="text-[11px] text-slate-400 font-mono">
+            ID #${equipo.id}
           </span>
         </div>
 
-        <h3 class="text-lg font-bold text-white group-hover:text-emerald-300 transition-colors mb-1 truncate" title="${escapeHtml(equipo.nombre)}">
+        <h3 class="text-sm sm:text-base font-bold text-slate-900 mb-0.5 truncate" title="${escapeHtml(equipo.nombre)}">
           ${escapeHtml(equipo.nombre)}
         </h3>
 
-        <div class="flex items-center text-xs text-slate-400 mb-4">
-          <i class="bi bi-geo-alt-fill text-emerald-400 me-1.5"></i>
+        <div class="flex items-center text-xs text-slate-500 mb-3">
+          <i class="bi bi-geo-alt text-slate-400 me-1"></i>
           <span>${escapeHtml(equipo.ciudad)}</span>
         </div>
       </div>
 
-      <div class="pt-3 border-t border-slate-800/80 flex items-center justify-end gap-2">
-        <button onclick="prepararEdicionEquipo(${equipo.id})" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
-          <i class="bi bi-pencil-square"></i> Editar
+      <div class="pt-2.5 border-t border-slate-100 flex items-center justify-end gap-1.5">
+        <button onclick="prepararEdicionEquipo(${equipo.id})" class="px-2.5 py-1 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-colors">
+          Editar
         </button>
-        <button onclick="confirmarEliminarEquipo(${equipo.id}, '${escapeHtml(equipo.nombre)}')" class="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-600 border border-rose-500/30 hover:border-rose-600 text-rose-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
-          <i class="bi bi-trash3"></i> Eliminar
+        <button onclick="confirmarEliminarEquipo(${equipo.id}, '${escapeHtml(equipo.nombre)}')" class="px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-medium transition-colors">
+          Eliminar
         </button>
       </div>
     `;
@@ -317,87 +400,69 @@ function renderizarEquipos(lista) {
 function renderizarEncuentros(lista) {
   const container = document.getElementById('listaEncuentrosContainer');
   const sinEncuentrosMsg = document.getElementById('sinEncuentrosMsg');
+  if (!container) return;
   container.innerHTML = '';
 
   if (!lista || lista.length === 0) {
-    sinEncuentrosMsg.classList.remove('hidden');
+    if (sinEncuentrosMsg) sinEncuentrosMsg.classList.remove('hidden');
     return;
   }
-  sinEncuentrosMsg.classList.add('hidden');
+  if (sinEncuentrosMsg) sinEncuentrosMsg.classList.add('hidden');
 
   lista.forEach(enc => {
     const card = document.createElement('div');
-    card.className = 'bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 p-5 shadow-lg hover:border-slate-700 transition-all';
+    card.className = 'bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-colors flex flex-col justify-between';
 
-    // Determinar resultado
-    let estadoResultado = 'Empate';
-    let claseResultado = 'text-amber-400 bg-amber-500/10 border-amber-500/30';
-    let localGana = false;
-    let visitanteGana = false;
-
-    if (enc.golesLocal > enc.golesVisitante) {
-      estadoResultado = `Victoria ${escapeHtml(enc.equipoLocal.nombre)}`;
-      claseResultado = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
-      localGana = true;
-    } else if (enc.golesLocal < enc.golesVisitante) {
-      estadoResultado = `Victoria ${escapeHtml(enc.equipoVisitante.nombre)}`;
-      claseResultado = 'text-teal-400 bg-teal-500/10 border-teal-500/30';
-      visitanteGana = true;
-    }
-
+    let localGana = enc.golesLocal > enc.golesVisitante;
+    let visitanteGana = enc.golesVisitante > enc.golesLocal;
     const fechaFormateada = formatearFecha(enc.fecha);
 
     card.innerHTML = `
-      <div class="flex items-center justify-between text-xs text-slate-400 mb-3 pb-2 border-b border-slate-800">
-        <span class="flex items-center gap-1.5">
-          <i class="bi bi-calendar3 text-emerald-400"></i> ${fechaFormateada}
-        </span>
-        <span class="px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${claseResultado}">
-          ${estadoResultado}
-        </span>
+      <div>
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-3 pb-2 border-b border-slate-100">
+          <span class="flex items-center gap-1.5 font-medium text-slate-500">
+            <i class="bi bi-calendar3 text-slate-400"></i> ${fechaFormateada}
+          </span>
+          <span class="font-mono text-[11px] text-slate-400">Partido #${enc.id}</span>
+        </div>
+
+        <!-- Scoreboard Fixture Row -->
+        <div class="flex items-center justify-between py-1 my-1">
+          <!-- Local -->
+          <div class="flex-1 flex items-center justify-end gap-2 text-right">
+            <span class="text-xs sm:text-sm font-semibold truncate ${localGana ? 'text-slate-900 font-bold' : 'text-slate-600'}" title="${escapeHtml(enc.equipoLocal.nombre)}">
+              ${escapeHtml(enc.equipoLocal.nombre)}
+            </span>
+            <span class="w-6 h-6 rounded bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-bold flex-shrink-0 flex items-center justify-center">
+              ${obtenerIniciales(enc.equipoLocal.nombre)}
+            </span>
+          </div>
+
+          <!-- Marcador Central -->
+          <div class="px-3 py-1 mx-3 rounded bg-slate-100 text-slate-900 font-bold text-sm tabular-nums tracking-wide">
+            ${enc.golesLocal} &ndash; ${enc.golesVisitante}
+          </div>
+
+          <!-- Visitante -->
+          <div class="flex-1 flex items-center justify-start gap-2 text-left">
+            <span class="w-6 h-6 rounded bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-bold flex-shrink-0 flex items-center justify-center">
+              ${obtenerIniciales(enc.equipoVisitante.nombre)}
+            </span>
+            <span class="text-xs sm:text-sm font-semibold truncate ${visitanteGana ? 'text-slate-900 font-bold' : 'text-slate-600'}" title="${escapeHtml(enc.equipoVisitante.nombre)}">
+              ${escapeHtml(enc.equipoVisitante.nombre)}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <!-- Fila de Scoreboard del Partido -->
-      <div class="grid grid-cols-7 items-center gap-2 my-4">
-        
-        <!-- Local -->
-        <div class="col-span-3 text-right">
-          <div class="font-bold text-sm sm:text-base ${localGana ? 'text-emerald-300 font-extrabold' : 'text-slate-200'} truncate" title="${escapeHtml(enc.equipoLocal.nombre)}">
-            ${escapeHtml(enc.equipoLocal.nombre)}
-          </div>
-          <div class="text-[11px] text-slate-500 truncate">${escapeHtml(enc.equipoLocal.ciudad)} (Local)</div>
-        </div>
-
-        <!-- Marcador Central -->
-        <div class="col-span-1 text-center">
-          <div class="inline-flex items-center justify-center font-score text-xl sm:text-2xl font-black bg-slate-950 px-3 py-1 rounded-xl border border-slate-800 text-white shadow-inner">
-            <span class="${localGana ? 'text-emerald-400' : ''}">${enc.golesLocal}</span>
-            <span class="text-slate-500 mx-1">-</span>
-            <span class="${visitanteGana ? 'text-teal-400' : ''}">${enc.golesVisitante}</span>
-          </div>
-        </div>
-
-        <!-- Visitante -->
-        <div class="col-span-3 text-left">
-          <div class="font-bold text-sm sm:text-base ${visitanteGana ? 'text-teal-300 font-extrabold' : 'text-slate-200'} truncate" title="${escapeHtml(enc.equipoVisitante.nombre)}">
-            ${escapeHtml(enc.equipoVisitante.nombre)}
-          </div>
-          <div class="text-[11px] text-slate-500 truncate">${escapeHtml(enc.equipoVisitante.ciudad)} (Visita)</div>
-        </div>
-
-      </div>
-
-      <!-- Acciones de Encuentro -->
-      <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-        <span class="text-slate-500 font-mono">Match #${enc.id}</span>
-        <div class="flex items-center gap-2">
-          <button onclick="prepararEdicionEncuentro(${enc.id})" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors">
-            <i class="bi bi-pencil-square me-1"></i> Editar
-          </button>
-          <button onclick="confirmarEliminarEncuentro(${enc.id})" class="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-600 text-rose-300 hover:text-white transition-colors">
-            <i class="bi bi-trash3 me-1"></i> Eliminar
-          </button>
-        </div>
+      <!-- Acciones -->
+      <div class="pt-2.5 mt-3 border-t border-slate-100 flex items-center justify-end gap-1.5">
+        <button onclick="prepararEdicionEncuentro(${enc.id})" class="px-2.5 py-1 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-colors">
+          Editar
+        </button>
+        <button onclick="confirmarEliminarEncuentro(${enc.id})" class="px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-medium transition-colors">
+          Eliminar
+        </button>
       </div>
     `;
     container.appendChild(card);
@@ -405,49 +470,66 @@ function renderizarEncuentros(lista) {
 }
 
 /**
- * Llena los selects de equipos en el modal de nuevo encuentro
+ * Llena selects de equipos en modales y filtros
  */
 function poblarSelectsEquipos(equipos, selectedLocalId = null, selectedVisitanteId = null) {
   const selLocal = document.getElementById('selectEquipoLocal');
   const selVisitante = document.getElementById('selectEquipoVisitante');
+  const selFiltro = document.getElementById('filtroEquipoEncuentro');
 
-  selLocal.innerHTML = '<option value="" disabled selected>Seleccione equipo local...</option>';
-  selVisitante.innerHTML = '<option value="" disabled selected>Seleccione equipo visitante...</option>';
+  if (selFiltro) {
+    const valActual = selFiltro.value;
+    selFiltro.innerHTML = '<option value="">Todos los clubes</option>';
+    equipos.forEach(eq => {
+      const opt = document.createElement('option');
+      opt.value = eq.id;
+      opt.textContent = `${eq.nombre} (${eq.ciudad})`;
+      if (valActual && String(valActual) === String(eq.id)) {
+        opt.selected = true;
+      }
+      selFiltro.appendChild(opt);
+    });
+  }
 
-  equipos.forEach(eq => {
-    const optLocal = document.createElement('option');
-    optLocal.value = eq.id;
-    optLocal.textContent = `${eq.nombre} (${eq.ciudad})`;
-    if (selectedLocalId && String(selectedLocalId) === String(eq.id)) {
-      optLocal.selected = true;
-    }
-    selLocal.appendChild(optLocal);
+  if (selLocal) {
+    selLocal.innerHTML = '<option value="" disabled selected>Seleccione local...</option>';
+    equipos.forEach(eq => {
+      const optLocal = document.createElement('option');
+      optLocal.value = eq.id;
+      optLocal.textContent = `${eq.nombre} (${eq.ciudad})`;
+      if (selectedLocalId && String(selectedLocalId) === String(eq.id)) {
+        optLocal.selected = true;
+      }
+      selLocal.appendChild(optLocal);
+    });
+  }
 
-    const optVis = document.createElement('option');
-    optVis.value = eq.id;
-    optVis.textContent = `${eq.nombre} (${eq.ciudad})`;
-    if (selectedVisitanteId && String(selectedVisitanteId) === String(eq.id)) {
-      optVis.selected = true;
-    }
-    selVisitante.appendChild(optVis);
-  });
+  if (selVisitante) {
+    selVisitante.innerHTML = '<option value="" disabled selected>Seleccione visitante...</option>';
+    equipos.forEach(eq => {
+      const optVis = document.createElement('option');
+      optVis.value = eq.id;
+      optVis.textContent = `${eq.nombre} (${eq.ciudad})`;
+      if (selectedVisitanteId && String(selectedVisitanteId) === String(eq.id)) {
+        optVis.selected = true;
+      }
+      selVisitante.appendChild(optVis);
+    });
+  }
 }
 
 // =====================================================================
-// 6. CONTROLADORES DE MODALES Y FORMULARIOS (CRUD COMPLETO)
+// 6. CONTROLADORES DE MODALES Y FORMULARIOS (CRUD)
 // =====================================================================
 
 function abrirModalNuevoEquipo() {
   document.getElementById('formEquipo').reset();
   document.getElementById('equipoId').value = '';
-  document.getElementById('modalEquipoTitulo').textContent = 'Nuevo Equipo';
+  document.getElementById('modalEquipoTitulo').textContent = 'Nuevo Club';
   document.getElementById('formEquipo').classList.remove('was-validated');
-  modalEquipoBS.show();
+  if (modalEquipoBS) modalEquipoBS.show();
 }
 
-/**
- * 3. GET /api/equipos/{id}
- */
 async function prepararEdicionEquipo(id) {
   mostrarLoading(true);
   try {
@@ -458,19 +540,16 @@ async function prepararEdicionEquipo(id) {
     document.getElementById('equipoId').value = eq.id;
     document.getElementById('equipoNombre').value = eq.nombre;
     document.getElementById('equipoCiudad').value = eq.ciudad;
-    document.getElementById('modalEquipoTitulo').textContent = 'Editar Equipo';
+    document.getElementById('modalEquipoTitulo').textContent = 'Editar Club';
     document.getElementById('formEquipo').classList.remove('was-validated');
-    modalEquipoBS.show();
+    if (modalEquipoBS) modalEquipoBS.show();
   } catch (error) {
-    mostrarToast(`No se pudo obtener el equipo: ${error.message}`, 'error');
+    mostrarToast(`No se pudo obtener el club: ${error.message}`, 'error');
   } finally {
     mostrarLoading(false);
   }
 }
 
-/**
- * 1. POST /api/equipos  o  4. PUT /api/equipos/{id}
- */
 async function manejarSubmitEquipo(e) {
   e.preventDefault();
   const form = e.target;
@@ -499,8 +578,8 @@ async function manejarSubmitEquipo(e) {
 
     if (!res.ok) throw await extraerError(res);
 
-    modalEquipoBS.hide();
-    mostrarToast(esEdicion ? '¡Equipo actualizado con éxito!' : '¡Equipo creado con éxito!', 'success');
+    if (modalEquipoBS) modalEquipoBS.hide();
+    mostrarToast(esEdicion ? 'Club actualizado correctamente' : 'Club registrado correctamente', 'success');
     await cargarTodosLosDatos();
   } catch (error) {
     mostrarToast(error.message, 'error');
@@ -509,57 +588,45 @@ async function manejarSubmitEquipo(e) {
   }
 }
 
-/**
- * 5. DELETE /api/equipos/{id}
- */
 function confirmarEliminarEquipo(id, nombre) {
-  document.getElementById('confirmarTitulo').textContent = `¿Eliminar "${nombre}"?`;
-  document.getElementById('confirmarMensaje').textContent = 'Si el equipo posee encuentros disputados, el sistema impedirá su eliminación para proteger las estadísticas.';
-
-  accionAEliminar = async () => {
+  mostrarConfirmacionEliminar(`¿Eliminar el club "${nombre}"?`, async () => {
     mostrarLoading(true);
     try {
       const res = await fetch(API.equipos.eliminar(id), { method: 'DELETE' });
       if (!res.ok) throw await extraerError(res);
 
-      mostrarToast('Equipo eliminado exitosamente', 'success');
+      mostrarToast('Club eliminado correctamente', 'success');
       await cargarTodosLosDatos();
     } catch (error) {
       mostrarToast(`No se pudo eliminar: ${error.message}`, 'error');
     } finally {
       mostrarLoading(false);
     }
-  };
-
-  modalEliminarBS.show();
+  });
 }
 
 function abrirModalNuevoEncuentro() {
   if (equiposCache.length < 2) {
-    mostrarToast('Se requieren al menos 2 equipos para poder registrar un partido.', 'warning');
+    mostrarToast('Se requieren al menos 2 clubes registrados para programar un partido.', 'warning');
     abrirModalNuevoEquipo();
     return;
   }
 
   document.getElementById('formEncuentro').reset();
   document.getElementById('encuentroId').value = '';
-  document.getElementById('modalEncuentroTitulo').textContent = 'Registrar Encuentro';
+  document.getElementById('modalEncuentroTitulo').textContent = 'Registrar Partido';
   document.getElementById('golesLocal').value = 0;
   document.getElementById('golesVisitante').value = 0;
   document.getElementById('alertaMismoEquipo').classList.add('hidden');
   document.getElementById('formEncuentro').classList.remove('was-validated');
 
-  // Fecha de hoy por defecto
   const hoy = new Date().toISOString().split('T')[0];
   document.getElementById('encuentroFecha').value = hoy;
 
   poblarSelectsEquipos(equiposCache);
-  modalEncuentroBS.show();
+  if (modalEncuentroBS) modalEncuentroBS.show();
 }
 
-/**
- * 8. GET /api/encuentros/{id}
- */
 async function prepararEdicionEncuentro(id) {
   mostrarLoading(true);
   try {
@@ -568,7 +635,7 @@ async function prepararEdicionEncuentro(id) {
     const enc = await res.json();
 
     document.getElementById('encuentroId').value = enc.id;
-    document.getElementById('modalEncuentroTitulo').textContent = 'Editar Encuentro';
+    document.getElementById('modalEncuentroTitulo').textContent = 'Editar Partido';
     document.getElementById('golesLocal').value = enc.golesLocal;
     document.getElementById('golesVisitante').value = enc.golesVisitante;
     document.getElementById('encuentroFecha').value = enc.fecha;
@@ -576,17 +643,14 @@ async function prepararEdicionEncuentro(id) {
     document.getElementById('formEncuentro').classList.remove('was-validated');
 
     poblarSelectsEquipos(equiposCache, enc.equipoLocal.id, enc.equipoVisitante.id);
-    modalEncuentroBS.show();
+    if (modalEncuentroBS) modalEncuentroBS.show();
   } catch (error) {
-    mostrarToast(`No se pudo obtener el encuentro: ${error.message}`, 'error');
+    mostrarToast(`No se pudo obtener el partido: ${error.message}`, 'error');
   } finally {
     mostrarLoading(false);
   }
 }
 
-/**
- * 6. POST /api/encuentros  o  9. PUT /api/encuentros/{id}
- */
 async function manejarSubmitEncuentro(e) {
   e.preventDefault();
   const form = e.target;
@@ -597,9 +661,8 @@ async function manejarSubmitEncuentro(e) {
   const golesVisitante = parseInt(document.getElementById('golesVisitante').value, 10);
   const fecha = document.getElementById('encuentroFecha').value;
 
-  // Validación de Reglas de Negocio en Frontend
   if (!equipoLocalId || !equipoVisitanteId) {
-    mostrarToast('Debe seleccionar ambos equipos.', 'warning');
+    mostrarToast('Selecciona ambos equipos.', 'warning');
     return;
   }
   if (equipoLocalId === equipoVisitanteId) {
@@ -608,7 +671,7 @@ async function manejarSubmitEncuentro(e) {
     return;
   }
   if (isNaN(golesLocal) || golesLocal < 0 || isNaN(golesVisitante) || golesVisitante < 0) {
-    mostrarToast('Regla de negocio: Los goles deben ser mayores o iguales a 0.', 'error');
+    mostrarToast('Los goles deben ser números enteros mayores o iguales a 0.', 'error');
     return;
   }
   if (!fecha) {
@@ -639,8 +702,8 @@ async function manejarSubmitEncuentro(e) {
 
     if (!res.ok) throw await extraerError(res);
 
-    modalEncuentroBS.hide();
-    mostrarToast(esEdicion ? '¡Encuentro actualizado con éxito!' : '¡Encuentro registrado con éxito!', 'success');
+    if (modalEncuentroBS) modalEncuentroBS.hide();
+    mostrarToast(esEdicion ? 'Partido actualizado correctamente' : 'Partido registrado correctamente', 'success');
     await cargarTodosLosDatos();
   } catch (error) {
     mostrarToast(error.message, 'error');
@@ -649,90 +712,71 @@ async function manejarSubmitEncuentro(e) {
   }
 }
 
-/**
- * 10. DELETE /api/encuentros/{id}
- */
 function confirmarEliminarEncuentro(id) {
-  document.getElementById('confirmarTitulo').textContent = `¿Eliminar Encuentro #${id}?`;
-  document.getElementById('confirmarMensaje').textContent = 'La tabla de posiciones se recalculará automáticamente tras eliminar este partido.';
-
-  accionAEliminar = async () => {
+  mostrarConfirmacionEliminar(`¿Eliminar Partido #${id}?`, async () => {
     mostrarLoading(true);
     try {
       const res = await fetch(API.encuentros.eliminar(id), { method: 'DELETE' });
       if (!res.ok) throw await extraerError(res);
 
-      mostrarToast('Encuentro eliminado exitosamente', 'success');
+      mostrarToast('Partido eliminado correctamente', 'success');
       await cargarTodosLosDatos();
     } catch (error) {
       mostrarToast(`No se pudo eliminar el encuentro: ${error.message}`, 'error');
     } finally {
       mostrarLoading(false);
     }
-  };
-
-  modalEliminarBS.show();
+  });
 }
 
 // =====================================================================
 // 7. UTILIDADES (TOASTS, SPINNER, HELPERS)
 // =====================================================================
 
-/**
- * Extrae mensaje de error estructurado devuelto por GlobalExceptionHandler
- */
 async function extraerError(res) {
   try {
     const json = await res.json();
-    return new Error(json.message || json.error || `Error ${res.status}: ${res.statusText}`);
+    const mensaje = json.error || json.message || `Error ${res.status}: ${res.statusText}`;
+    return new Error(mensaje);
   } catch {
     return new Error(`Error ${res.status}: ${res.statusText}`);
   }
 }
 
-/**
- * Muestra un Toast de Bootstrap con estilos adaptados al tema
- * tipos: 'success', 'error', 'warning', 'info'
- */
 function mostrarToast(mensaje, tipo = 'info') {
   const container = document.getElementById('toastContainer');
+  if (!container) return;
 
-  let icono = 'bi-info-circle-fill text-cyan-400';
-  let borde = 'border-cyan-500/40';
-  let titulo = 'Información';
+  let icono = 'bi-info-circle text-slate-700';
+  let borde = 'border-slate-200';
 
   if (tipo === 'success') {
-    icono = 'bi-check-circle-fill text-emerald-400';
-    borde = 'border-emerald-500/50';
-    titulo = 'Éxito';
+    icono = 'bi-check2-circle text-emerald-600';
+    borde = 'border-slate-200';
   } else if (tipo === 'error') {
-    icono = 'bi-exclamation-octagon-fill text-rose-400';
-    borde = 'border-rose-500/50';
-    titulo = 'Atención';
+    icono = 'bi-exclamation-circle text-rose-600';
+    borde = 'border-rose-200';
   } else if (tipo === 'warning') {
-    icono = 'bi-exclamation-triangle-fill text-amber-400';
-    borde = 'border-amber-500/50';
-    titulo = 'Advertencia';
+    icono = 'bi-exclamation-triangle text-amber-600';
+    borde = 'border-amber-200';
   }
 
   const toastId = 'toast-' + Date.now();
   const toastHtml = `
-    <div id="${toastId}" class="toast align-items-center text-white bg-slate-900 border ${borde} shadow-2xl rounded-2xl mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="toast-header bg-slate-950 text-white border-b border-slate-800 rounded-t-2xl">
-        <i class="bi ${icono} me-2 text-base"></i>
-        <strong class="me-auto text-xs uppercase tracking-wider">${titulo}</strong>
-        <small class="text-slate-500">ahora</small>
-        <button type="button" class="btn-close btn-close-white ms-2 mb-1" data-bs-dismiss="toast" aria-label="Cerrar"></button>
-      </div>
-      <div class="toast-body text-xs text-slate-200">
-        ${escapeHtml(mensaje)}
+    <div id="${toastId}" class="toast align-items-center text-slate-800 bg-white border ${borde} shadow-md rounded-xl mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="flex items-center px-3.5 py-2.5">
+        <i class="bi ${icono} text-base me-2.5 flex-shrink-0"></i>
+        <div class="toast-body p-0 text-xs font-medium text-slate-700 flex-1">
+          ${escapeHtml(mensaje)}
+        </div>
+        <button type="button" class="btn-close btn-close-sm ms-2" data-bs-dismiss="toast" aria-label="Cerrar"></button>
       </div>
     </div>
   `;
 
   container.insertAdjacentHTML('beforeend', toastHtml);
   const toastEl = document.getElementById(toastId);
-  const bsToast = new bootstrap.Toast(toastEl, { delay: 4500 });
+  const bsToast = new bootstrap.Toast(toastEl, { delay: 4000 });
   bsToast.show();
 
   toastEl.addEventListener('hidden.bs.toast', () => {
@@ -742,6 +786,7 @@ function mostrarToast(mensaje, tipo = 'info') {
 
 function mostrarLoading(mostrar) {
   const spinner = document.getElementById('loadingIndicator');
+  if (!spinner) return;
   if (mostrar) {
     spinner.classList.remove('pointer-events-none', 'opacity-0');
     spinner.classList.add('opacity-100');
@@ -774,103 +819,107 @@ function escapeHtml(text) {
 }
 
 // =====================================================================
-// 10. MÓDULO DE ESTADÍSTICAS Y DASHBOARD (NUEVO)
+// 8. DASHBOARD Y ESTADÍSTICAS
 // =====================================================================
 
-// Endpoints adicionales para estadísticas
-API.estadisticas = {
-  resumen: () => `${API_BASE}/estadisticas/resumen`,
-  equipoStats: (id) => `${API_BASE}/equipos/${id}/estadisticas`
-};
+async function cargarDashboardSilencioso() {
+  try {
+    const resResumen = await fetch(API.estadisticas.resumen());
+    if (resResumen.ok) {
+      const resumen = await resResumen.json();
+      actualizarMetricasDashboard(resumen);
+    }
 
-let graficoGolesChartInstance = null;
-let statsEquiposCache = new Map();
-
-/**
- * Calcula el badge de racha (🔥 positiva, ❄️ negativa, ➖ neutral)
- * a partir de la lista de los últimos resultados (ej. ["G", "E", "P", "G", "G"]).
- * 
- * @param {Array<string>} racha Array con los últimos resultados
- * @returns {Object} Objeto con emoji, texto, clase CSS y formato HTML
- */
-function calcularBadgeRacha(racha) {
-  if (!racha || !Array.isArray(racha) || racha.length === 0) {
-    return {
-      emoji: '➖',
-      tipo: 'neutral',
-      texto: 'Sin partidos jugados aún',
-      clase: 'bg-slate-800 text-slate-400 border border-slate-700/60',
-      html: `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700/60 cursor-help" title="Sin encuentros disputados">➖</span>`
-    };
-  }
-
-  const victorias = racha.filter(r => r === 'G').length;
-  const derrotas = racha.filter(r => r === 'P').length;
-
-  if (victorias > derrotas) {
-    return {
-      emoji: '🔥',
-      tipo: 'positiva',
-      texto: `En racha positiva (${victorias}V / ${derrotas}D en últimos ${racha.length})`,
-      clase: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
-      html: `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 cursor-help" title="En racha positiva: ${racha.join(' - ')}">🔥</span>`
-    };
-  } else if (derrotas > victorias) {
-    return {
-      emoji: '❄️',
-      tipo: 'negativa',
-      texto: `En racha negativa (${derrotas}D / ${victorias}V en últimos ${racha.length})`,
-      clase: 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30',
-      html: `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 cursor-help" title="En racha negativa: ${racha.join(' - ')}">❄️</span>`
-    };
-  } else {
-    return {
-      emoji: '➖',
-      tipo: 'neutral',
-      texto: `Racha equilibrada (${victorias}V / ${derrotas}D en últimos ${racha.length})`,
-      clase: 'bg-slate-800 text-slate-300 border border-slate-700/60',
-      html: `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700/60 cursor-help" title="Racha neutral: ${racha.join(' - ')}">➖</span>`
-    };
+    if (equiposCache.length > 0) {
+      const promesasStats = equiposCache.map(eq =>
+        fetch(API.estadisticas.equipoStats(eq.id))
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null)
+      );
+      const statsValidas = (await Promise.all(promesasStats)).filter(st => st !== null);
+      statsValidas.forEach(st => statsEquiposCache.set(st.equipoId, st));
+      renderizarCardsRachas(statsValidas);
+    }
+  } catch (e) {
+    console.warn('Dashboard background sync:', e);
   }
 }
 
-/**
- * Renderiza el gráfico de barras comparativo de Goles a Favor usando Chart.js
- * 
- * @param {Array<Object>} equiposStats Lista de estadísticas de equipos
- */
+async function cargarDashboard() {
+  try {
+    mostrarLoading(true);
+    const resResumen = await fetch(API.estadisticas.resumen());
+    if (resResumen.ok) {
+      const resumen = await resResumen.json();
+      actualizarMetricasDashboard(resumen);
+    }
+
+    let equipos = equiposCache;
+    if (!equipos || equipos.length === 0) {
+      const resEquipos = await fetch(API.equipos.listar());
+      if (resEquipos.ok) {
+        equipos = await resEquipos.json();
+        equiposCache = equipos;
+      }
+    }
+
+    if (!equipos || equipos.length === 0) return;
+
+    const promesasStats = equipos.map(eq =>
+      fetch(API.estadisticas.equipoStats(eq.id))
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null)
+    );
+
+    const resultadosStats = await Promise.all(promesasStats);
+    const statsValidas = resultadosStats.filter(st => st !== null);
+    statsValidas.forEach(st => statsEquiposCache.set(st.equipoId, st));
+
+    renderGraficoGoles(statsValidas);
+    renderizarCardsRachas(statsValidas);
+  } catch (error) {
+    console.error('Error al cargar dashboard:', error);
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function actualizarMetricasDashboard(resumen) {
+  const elTotalGoles = document.getElementById('statTotalGoles');
+  const elTotalPartidos = document.getElementById('statTotalPartidos');
+  const elPromedio = document.getElementById('statPromedioGoles');
+  const elGoleador = document.getElementById('statEquipoGoleador');
+  const elGolesLider = document.getElementById('statGolesLider');
+  const elMejorDefensa = document.getElementById('statMejorDefensa');
+  const elGolesDefensa = document.getElementById('statGolesDefensa');
+
+  if (elTotalGoles) animarContador(elTotalGoles, resumen.totalGoles ?? 0, 800);
+  if (elTotalPartidos) animarContador(elTotalPartidos, resumen.totalPartidos ?? 0, 800, ' partidos');
+  if (elPromedio) elPromedio.textContent = Number(resumen.promedioGolesPorPartido ?? 0).toFixed(2);
+  if (elGoleador) elGoleador.textContent = resumen.equipoMasGoleador || '--';
+  if (elGolesLider) elGolesLider.textContent = `${resumen.golesEquipoMasGoleador ?? 0} goles a favor`;
+  if (elMejorDefensa) elMejorDefensa.textContent = resumen.equipoMejorDefensa || '--';
+  if (elGolesDefensa) elGolesDefensa.textContent = `${resumen.golesRecibidosMejorDefensa ?? 0} goles recibidos`;
+}
+
 function renderGraficoGoles(equiposStats) {
   const canvas = document.getElementById('graficoGolesFavorCanvas');
   if (!canvas) return;
 
-  if (typeof Chart === 'undefined') {
-    console.warn('Chart.js aún no está disponible.');
-    return;
-  }
+  if (typeof Chart === 'undefined') return;
 
-  // Destruir instancia previa si existe para evitar superposiciones
   if (graficoGolesChartInstance) {
     graficoGolesChartInstance.destroy();
   }
 
   const ctx = canvas.getContext('2d');
-
-  // Preparar datos ordenados por goles a favor descendente
   const obtenerGF = (e) => (e.GF ?? e.gf ?? e.golesAFavor ?? 0);
   const obtenerGC = (e) => (e.GC ?? e.gc ?? e.golesEnContra ?? 0);
   const datosOrdenados = [...equiposStats].sort((a, b) => obtenerGF(b) - obtenerGF(a));
+
   const etiquetas = datosOrdenados.map(e => e.equipoNombre);
   const valoresGF = datosOrdenados.map(e => obtenerGF(e));
   const valoresGC = datosOrdenados.map(e => obtenerGC(e));
-
-  // Crear gradientes para las barras
-  const gradienteGF = ctx.createLinearGradient(0, 0, 0, 300);
-  gradienteGF.addColorStop(0, '#10b981'); // Emerald 500
-  gradienteGF.addColorStop(1, '#064e3b'); // Emerald 900
-
-  const gradienteGC = ctx.createLinearGradient(0, 0, 0, 300);
-  gradienteGC.addColorStop(0, '#f43f5e'); // Rose 500
-  gradienteGC.addColorStop(1, '#881337'); // Rose 900
 
   graficoGolesChartInstance = new Chart(ctx, {
     type: 'bar',
@@ -878,21 +927,17 @@ function renderGraficoGoles(equiposStats) {
       labels: etiquetas,
       datasets: [
         {
-          label: 'Goles a Favor (GF)',
+          label: 'Goles a Favor',
           data: valoresGF,
-          backgroundColor: gradienteGF,
-          borderColor: '#34d399',
-          borderWidth: 1.5,
-          borderRadius: 8,
+          backgroundColor: '#0f172a', // Deep Slate
+          borderRadius: 4,
           borderSkipped: false
         },
         {
-          label: 'Goles en Contra (GC)',
+          label: 'Goles en Contra',
           data: valoresGC,
-          backgroundColor: gradienteGC,
-          borderColor: '#fb7185',
-          borderWidth: 1.5,
-          borderRadius: 8,
+          backgroundColor: '#cbd5e1', // Slate 300
+          borderRadius: 4,
           borderSkipped: false
         }
       ]
@@ -907,252 +952,85 @@ function renderGraficoGoles(equiposStats) {
       plugins: {
         legend: {
           position: 'top',
+          align: 'end',
           labels: {
-            color: '#cbd5e1',
-            font: {
-              family: 'Outfit, sans-serif',
-              size: 13,
-              weight: '600'
-            },
-            usePointStyle: true,
-            pointStyle: 'circle',
-            padding: 20
+            boxWidth: 12,
+            boxHeight: 12,
+            color: '#64748b',
+            font: { family: '"Plus Jakarta Sans", sans-serif', size: 12, weight: '500' }
           }
         },
         tooltip: {
           backgroundColor: '#0f172a',
           titleColor: '#ffffff',
           bodyColor: '#e2e8f0',
-          borderColor: '#334155',
-          borderWidth: 1,
-          padding: 12,
-          boxPadding: 6,
-          usePointStyle: true,
-          titleFont: {
-            family: 'Outfit, sans-serif',
-            weight: 'bold',
-            size: 14
-          },
-          bodyFont: {
-            family: 'Outfit, sans-serif',
-            size: 13
-          }
+          padding: 10,
+          cornerRadius: 8,
+          bodyFont: { family: '"Plus Jakarta Sans", sans-serif', size: 12 }
         }
       },
       scales: {
         x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            color: '#94a3b8',
-            font: {
-              family: 'Outfit, sans-serif',
-              size: 12,
-              weight: '500'
-            }
-          }
+          grid: { display: false },
+          ticks: { color: '#64748b', font: { family: '"Plus Jakarta Sans", sans-serif', size: 11 } }
         },
         y: {
           beginAtZero: true,
-          grid: {
-            color: 'rgba(255, 255, 255, 0.05)',
-            lineWidth: 1
-          },
-          ticks: {
-            stepSize: 1,
-            color: '#94a3b8',
-            font: {
-              family: 'Chakra Petch, monospace',
-              size: 12
-            }
-          }
+          grid: { color: '#f1f5f9' },
+          ticks: { stepSize: 1, color: '#64748b', font: { family: '"Plus Jakarta Sans", sans-serif', size: 11 } }
         }
       }
     }
   });
 }
 
-/**
- * Inyecta el badge de racha junto a cada equipo en la tabla de posiciones ya existente,
- * sin romper su estructura HTML original.
- * 
- * @param {Array<Object>} equiposStats Lista de estadísticas de equipos
- */
-function inyectarBadgesRachaEnTabla(equiposStats) {
-  const tbody = document.getElementById('tablaPosicionesBody');
-  if (!tbody) return;
-
-  const filas = tbody.querySelectorAll('tr');
-  if (!filas || filas.length === 0) return;
-
-  const mapaStats = new Map();
-  equiposStats.forEach(st => {
-    mapaStats.set(st.equipoId, st);
-    mapaStats.set(st.equipoNombre.trim().toLowerCase(), st);
-  });
-
-  filas.forEach((fila, idx) => {
-    // La celda 2 contiene el nombre del equipo: <td class="font-bold text-white flex items-center gap-2">
-    const celdaEquipo = fila.querySelector('td:nth-child(2)');
-    if (!celdaEquipo) return;
-
-    // Obtener el nombre del equipo
-    const spanNombre = celdaEquipo.querySelector('span:not(.w-8)');
-    if (!spanNombre) return;
-
-    const nombreTexto = spanNombre.textContent.trim().toLowerCase();
-    const st = mapaStats.get(nombreTexto);
-    if (!st) return;
-
-    const racha = st.racha || [];
-    const badgeObj = calcularBadgeRacha(racha);
-
-    // Evitar duplicar el badge si ya existe
-    let badgeExistente = celdaEquipo.querySelector('.badge-racha-tag');
-    if (!badgeExistente) {
-      const nuevoBadge = document.createElement('span');
-      nuevoBadge.className = `badge-racha-tag ms-1.5 transition-transform hover:scale-110`;
-      nuevoBadge.innerHTML = badgeObj.html;
-      celdaEquipo.appendChild(nuevoBadge);
-    } else {
-      badgeExistente.innerHTML = badgeObj.html;
-    }
-  });
-}
-
-/**
- * Carga todos los datos del nuevo Dashboard:
- * 1. Resumen general del torneo (/api/estadisticas/resumen)
- * 2. Estadísticas individuales por equipo (/api/equipos + /api/equipos/{id}/estadisticas)
- * 3. Renderiza tarjetas Tailwind, gráfico Chart.js y badges de racha en tabla de posiciones.
- */
-async function cargarDashboard() {
-  try {
-    // 1. Obtener Resumen Global del Torneo
-    const resResumen = await fetch(API.estadisticas.resumen());
-    if (resResumen.ok) {
-      const resumen = await resResumen.json();
-
-      // Actualizar Tarjetas con Tailwind
-      const elTotalGoles = document.getElementById('statTotalGoles');
-      const elTotalPartidos = document.getElementById('statTotalPartidos');
-      const elPromedio = document.getElementById('statPromedioGoles');
-      const elGoleador = document.getElementById('statEquipoGoleador');
-      const elGolesLider = document.getElementById('statGolesLider');
-      const elMejorDefensa = document.getElementById('statMejorDefensa');
-      const elGolesDefensa = document.getElementById('statGolesDefensa');
-
-      if (elTotalGoles) elTotalGoles.textContent = resumen.totalGoles ?? 0;
-      if (elTotalPartidos) elTotalPartidos.textContent = `${resumen.totalPartidos ?? 0} partidos`;
-      if (elPromedio) elPromedio.textContent = Number(resumen.promedioGolesPorPartido ?? 0).toFixed(2);
-      if (elGoleador) elGoleador.textContent = resumen.equipoMasGoleador || '--';
-      if (elGolesLider) elGolesLider.textContent = `${resumen.golesEquipoMasGoleador ?? 0} goles a favor`;
-      if (elMejorDefensa) elMejorDefensa.textContent = resumen.equipoMejorDefensa || '--';
-      if (elGolesDefensa) elGolesDefensa.textContent = `${resumen.golesRecibidosMejorDefensa ?? 0} goles en contra`;
-    }
-
-    // 2. Obtener lista de equipos para consultar estadísticas individuales
-    let equipos = equiposCache;
-    if (!equipos || equipos.length === 0) {
-      const resEquipos = await fetch(API.equipos.listar());
-      if (resEquipos.ok) {
-        equipos = await resEquipos.json();
-        equiposCache = equipos;
-      }
-    }
-
-    if (!equipos || equipos.length === 0) return;
-
-    // 3. Consultar estadísticas de cada equipo en paralelo (/api/equipos/{id}/estadisticas)
-    const promesasStats = equipos.map(eq =>
-      fetch(API.estadisticas.equipoStats(eq.id))
-        .then(r => r.ok ? r.json() : null)
-        .catch(err => {
-          console.warn(`Error al consultar estadísticas para equipo ${eq.id}:`, err);
-          return null;
-        })
-    );
-
-    const resultadosStats = await Promise.all(promesasStats);
-    const statsValidas = resultadosStats.filter(st => st !== null);
-
-    // Guardar en caché
-    statsValidas.forEach(st => statsEquiposCache.set(st.equipoId, st));
-
-    // 4. Renderizar gráfico Chart.js
-    renderGraficoGoles(statsValidas);
-
-    // 5. Inyectar badges de racha en la tabla de posiciones
-    inyectarBadgesRachaEnTabla(statsValidas);
-
-    // 6. Renderizar panel detallado de rachas en el Dashboard
-    renderizarCardsRachas(statsValidas);
-
-  } catch (error) {
-    console.error('Error al cargar datos del dashboard:', error);
-  }
-}
-
-/**
- * Renderiza cards detalladas de la racha de los últimos 5 resultados en el dashboard
- * 
- * @param {Array<Object>} listaStats Lista de estadísticas de equipos
- */
 function renderizarCardsRachas(listaStats) {
   const contenedor = document.getElementById('contenedorRachasDetalladas');
   if (!contenedor) return;
-
   contenedor.innerHTML = '';
 
   if (!listaStats || listaStats.length === 0) {
-    contenedor.innerHTML = `<div class="col-span-full text-center text-slate-500 py-6 text-sm">No hay información de equipos disponible.</div>`;
+    contenedor.innerHTML = `<div class="col-span-full text-center text-slate-400 py-6 text-xs">Sin información de clubes.</div>`;
     return;
   }
 
-  // Ordenar por puntos y diferencia de goles
   const ordenados = [...listaStats].sort((a, b) => (b.puntos ?? 0) - (a.puntos ?? 0));
 
   ordenados.forEach(item => {
     const racha = item.racha || [];
-    const badgeObj = calcularBadgeRacha(racha);
-
-    // Construir círculos para cada partido de la racha
     let rachaHtml = '';
     if (racha.length === 0) {
-      rachaHtml = '<span class="text-xs text-slate-500 italic">Sin partidos disputados</span>';
+      rachaHtml = '<span class="text-xs text-slate-400 italic">Sin partidos</span>';
     } else {
       rachaHtml = racha.map(res => {
         if (res === 'G') {
-          return `<span class="w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-bold flex items-center justify-center" title="Victoria">G</span>`;
+          return `<span class="form-dot form-dot-g" title="Victoria">G</span>`;
         } else if (res === 'E') {
-          return `<span class="w-6 h-6 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/40 text-xs font-bold flex items-center justify-center" title="Empate">E</span>`;
+          return `<span class="form-dot form-dot-e" title="Empate">E</span>`;
         } else {
-          return `<span class="w-6 h-6 rounded-md bg-rose-500/20 text-rose-400 border border-rose-500/40 text-xs font-bold flex items-center justify-center" title="Derrota">P</span>`;
+          return `<span class="form-dot form-dot-p" title="Derrota">P</span>`;
         }
-      }).join('');
+      }).join(' ');
     }
 
     const card = document.createElement('div');
-    card.className = 'bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 flex items-center justify-between gap-3 hover:border-slate-700 transition-colors';
+    card.className = 'bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 hover:border-slate-300 transition-colors';
     card.innerHTML = `
-      <div class="flex items-center gap-3">
-        <span class="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-black text-emerald-400">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <span class="w-8 h-8 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-700 flex-shrink-0">
           ${obtenerIniciales(item.equipoNombre)}
         </span>
-        <div>
-          <div class="font-bold text-white text-sm flex items-center gap-2">
-            <span>${escapeHtml(item.equipoNombre)}</span>
-            <span class="text-base" title="${badgeObj.texto}">${badgeObj.emoji}</span>
+        <div class="min-w-0">
+          <div class="font-bold text-slate-900 text-xs sm:text-sm truncate">
+            ${escapeHtml(item.equipoNombre)}
           </div>
-          <div class="text-xs text-slate-400 mt-0.5">
-            PJ: <b class="text-slate-300 font-score">${item.PJ ?? item.pj ?? item.partidosJugados ?? 0}</b> | 
-            PTS: <b class="text-emerald-400 font-score">${item.puntos ?? 0}</b> | 
-            GF: <b class="text-slate-300 font-score">${item.GF ?? item.gf ?? item.golesAFavor ?? 0}</b>
+          <div class="text-[11px] text-slate-500">
+            PJ: <span class="font-semibold text-slate-700">${item.PJ ?? item.pj ?? item.partidosJugados ?? 0}</span> &bull; 
+            PTS: <span class="font-bold text-slate-900">${item.puntos ?? 0}</span>
           </div>
         </div>
       </div>
-      <div class="flex items-center gap-1.5 flex-shrink-0">
+      <div class="flex items-center gap-1 flex-shrink-0">
         ${rachaHtml}
       </div>
     `;
@@ -1161,98 +1039,209 @@ function renderizarCardsRachas(listaStats) {
 }
 
 // =====================================================================
-// 11. INICIALIZACIÓN DE EVENTOS DEL NUEVO MÓDULO DASHBOARD
+// 9. FILTRADO Y BÚSQUEDA
 // =====================================================================
-document.addEventListener('DOMContentLoaded', () => {
 
-  // --- Al cambiar a la pestaña Dashboard: cargar datos y renderizar gráfico
-  //     Chart.js necesita que el canvas sea visible (dimensiones > 0) antes de renderizar.
-  //     Por eso llamamos a renderGraficoGoles dentro del evento shown.bs.tab.
-  const tabDashboardBtn = document.getElementById('tab-dashboard-btn');
-  if (tabDashboardBtn) {
-    tabDashboardBtn.addEventListener('shown.bs.tab', () => {
-      if (statsEquiposCache.size > 0) {
-        // Los datos ya están listos, solo re-renderizamos el gráfico ahora que el canvas es visible
-        requestAnimationFrame(() => {
-          renderGraficoGoles(Array.from(statsEquiposCache.values()));
-          renderizarCardsRachas(Array.from(statsEquiposCache.values()));
-        });
-      } else {
-        cargarDashboard();
-      }
-    });
+function filtrarEquipos(query) {
+  const termino = (query || '').trim().toLowerCase();
+  if (!termino) {
+    renderizarEquipos(equiposCache);
+    return;
   }
 
-  // Listener para el botón de refrescar Dashboard
-  const btnRefrescarDashboard = document.getElementById('btnRefrescarDashboard');
-  if (btnRefrescarDashboard) {
-    btnRefrescarDashboard.addEventListener('click', async () => {
-      mostrarToast('Actualizando métricas del dashboard...', 'info');
-      statsEquiposCache.clear();
-      await cargarDashboard();
-      mostrarToast('Dashboard actualizado correctamente', 'success');
-    });
+  if (equiposCache && equiposCache.length > 0) {
+    const filtrados = equiposCache.filter(eq =>
+      eq.nombre.toLowerCase().includes(termino) ||
+      (eq.ciudad && eq.ciudad.toLowerCase().includes(termino))
+    );
+    renderizarEquipos(filtrados);
+  } else {
+    fetch(API.equipos.buscar(termino))
+      .then(r => r.ok ? r.json() : [])
+      .then(data => renderizarEquipos(data))
+      .catch(() => renderizarEquipos([]));
+  }
+}
+
+async function filtrarEncuentrosPorFecha() {
+  const equipoId = document.getElementById('filtroEquipoEncuentro')?.value;
+  const fechaInicio = document.getElementById('filtroFechaInicio')?.value;
+  const fechaFin = document.getElementById('filtroFechaFin')?.value;
+
+  if (!equipoId && !fechaInicio && !fechaFin) {
+    mostrarToast('Selecciona un club o rango de fechas.', 'info');
+    return;
   }
 
-  // Al mostrar la Tabla de Posiciones, inyectar badges si ya tenemos stats
-  const tabTablaBtn = document.getElementById('tab-tabla-btn');
-  if (tabTablaBtn) {
-    tabTablaBtn.addEventListener('shown.bs.tab', async () => {
-      if (statsEquiposCache.size > 0) {
-        inyectarBadgesRachaEnTabla(Array.from(statsEquiposCache.values()));
-      } else {
-        // Cargar estadísticas en background, sin bloquear
-        cargarDashboard();
-      }
-    });
+  try {
+    const params = new URLSearchParams();
+    if (equipoId) params.append('equipoId', equipoId);
+    if (fechaInicio) params.append('fechaInicio', fechaInicio);
+    if (fechaFin) params.append('fechaFin', fechaFin);
+
+    const res = await fetch(API.encuentros.listarFiltrado(params.toString()));
+    if (!res.ok) throw await extraerError(res);
+    const data = await res.json();
+    renderizarEncuentros(data);
+    mostrarToast(`Se encontraron ${data.length} partido${data.length !== 1 ? 's' : ''}.`, 'success');
+  } catch (error) {
+    mostrarToast(`Error al filtrar: ${error.message}`, 'error');
+  }
+}
+
+async function limpiarFiltroEncuentros() {
+  const selEquipo = document.getElementById('filtroEquipoEncuentro');
+  const inputInicio = document.getElementById('filtroFechaInicio');
+  const inputFin = document.getElementById('filtroFechaFin');
+  if (selEquipo) selEquipo.value = '';
+  if (inputInicio) inputInicio.value = '';
+  if (inputFin) inputFin.value = '';
+
+  await cargarEncuentros();
+  mostrarToast('Filtros restablecidos', 'info');
+}
+
+// =====================================================================
+// 10. EXPORTACIÓN (CSV / PDF)
+// =====================================================================
+
+function exportarPosicionesCSV() {
+  mostrarToast('Generando archivo CSV...', 'info');
+  const url = API.estadisticas.exportarCsv();
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'posiciones.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  mostrarToast('Archivo CSV descargado', 'success');
+}
+
+function exportarPosicionesPDF() {
+  if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+    window.print();
+    return;
   }
 
-  // Pre-carga silenciosa del dashboard al iniciar la app:
-  // Obtiene datos y actualiza tarjetas + badges en la tabla, pero NO renderiza el
-  // gráfico aquí (el canvas está en una pestaña oculta y tendría dimensiones = 0).
-  setTimeout(async () => {
-    try {
-      const resResumen = await fetch(API.estadisticas.resumen());
-      if (resResumen.ok) {
-        const resumen = await resResumen.json();
-        const elTotalGoles = document.getElementById('statTotalGoles');
-        const elTotalPartidos = document.getElementById('statTotalPartidos');
-        const elPromedio = document.getElementById('statPromedioGoles');
-        const elGoleador = document.getElementById('statEquipoGoleador');
-        const elGolesLider = document.getElementById('statGolesLider');
-        const elMejorDefensa = document.getElementById('statMejorDefensa');
-        const elGolesDefensa = document.getElementById('statGolesDefensa');
-        if (elTotalGoles) elTotalGoles.textContent = resumen.totalGoles ?? 0;
-        if (elTotalPartidos) elTotalPartidos.textContent = `${resumen.totalPartidos ?? 0} partidos`;
-        if (elPromedio) elPromedio.textContent = Number(resumen.promedioGolesPorPartido ?? 0).toFixed(2);
-        if (elGoleador) elGoleador.textContent = resumen.equipoMasGoleador || '--';
-        if (elGolesLider) elGolesLider.textContent = `${resumen.golesEquipoMasGoleador ?? 0} goles a favor`;
-        if (elMejorDefensa) elMejorDefensa.textContent = resumen.equipoMejorDefensa || '--';
-        if (elGolesDefensa) elGolesDefensa.textContent = `${resumen.golesRecibidosMejorDefensa ?? 0} goles en contra`;
-      }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-      let equipos = equiposCache;
-      if (!equipos || equipos.length === 0) {
-        const resEquipos = await fetch(API.equipos.listar());
-        if (resEquipos.ok) { equipos = await resEquipos.json(); equiposCache = equipos; }
-      }
-      if (!equipos || equipos.length === 0) return;
+  doc.setFontSize(16);
+  doc.setTextColor(15, 23, 42); // slate-900
+  doc.text('Liga Fútbol — Tabla Oficial de Posiciones', 14, 18);
 
-      const promesasStats = equipos.map(eq =>
-        fetch(API.estadisticas.equipoStats(eq.id))
-          .then(r => r.ok ? r.json() : null).catch(() => null)
-      );
-      const statsValidas = (await Promise.all(promesasStats)).filter(st => st !== null);
-      statsValidas.forEach(st => statsEquiposCache.set(st.equipoId, st));
+  doc.setFontSize(9);
+  doc.setTextColor(100, 116, 139);
+  const ahora = new Date();
+  doc.text(`Generado el ${ahora.toLocaleDateString('es-PE')} a las ${ahora.toLocaleTimeString('es-PE')}`, 14, 24);
 
-      // Inyectar badges en tabla de posiciones (visible desde el inicio)
-      inyectarBadgesRachaEnTabla(statsValidas);
-      // Precargar cards de rachas (están en el DOM pero ocultas)
-      renderizarCardsRachas(statsValidas);
-      // El gráfico NO se renderiza aquí, lo hará cuando se abra el tab Dashboard
-    } catch (e) {
-      console.warn('Pre-carga dashboard silenciosa falló:', e);
+  const datos = tablaPosicionesCache.map(item => [
+    item.posicion,
+    item.equipoNombre,
+    item.ciudad || '',
+    item.partidosJugados,
+    item.partidosGanados,
+    item.partidosEmpatados,
+    item.partidosPerdidos,
+    item.golesAFavor,
+    item.golesEnContra,
+    (item.diferenciaGoles > 0 ? '+' : '') + item.diferenciaGoles,
+    item.puntos
+  ]);
+
+  doc.autoTable({
+    startY: 28,
+    head: [['#', 'Club', 'Ciudad', 'PJ', 'PG', 'PE', 'PP', 'GF', 'GC', 'DG', 'PTS']],
+    body: datos,
+    theme: 'grid',
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+      halign: 'center',
+      textColor: [15, 23, 42]
+    },
+    headStyles: {
+      fillColor: [15, 23, 42],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      halign: 'center'
+    },
+    columnStyles: {
+      0: { halign: 'center', fontStyle: 'bold' },
+      1: { halign: 'left' },
+      2: { halign: 'left' },
+      10: { fontStyle: 'bold' }
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252]
     }
-  }, 600);
-});
+  });
 
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      `Liga Fútbol — Página ${i} de ${pageCount}`,
+      doc.internal.pageSize.width / 2,
+      doc.internal.pageSize.height - 8,
+      { align: 'center' }
+    );
+  }
+
+  doc.save(`tabla_posiciones_${ahora.toISOString().slice(0, 10)}.pdf`);
+  mostrarToast('PDF generado correctamente', 'success');
+}
+
+// =====================================================================
+// 11. CONFIRMACIÓN Y ANIMACIONES
+// =====================================================================
+
+function mostrarConfirmacionEliminar(detalle, callback) {
+  const modalEl = document.getElementById('modalConfirmarEliminar');
+  const tituloEl = document.getElementById('confirmarTitulo');
+  const mensajeEl = document.getElementById('confirmarMensaje');
+
+  if (tituloEl) tituloEl.textContent = detalle || '¿Confirmar eliminación?';
+  if (mensajeEl) mensajeEl.textContent = 'Esta acción no se puede deshacer.';
+
+  accionAEliminar = typeof callback === 'function' ? callback : null;
+
+  if (modalEliminarBS) {
+    modalEliminarBS.show();
+  } else if (modalEl && typeof bootstrap !== 'undefined') {
+    modalEliminarBS = new bootstrap.Modal(modalEl);
+    modalEliminarBS.show();
+  }
+}
+
+function animarContador(elemento, valorFinal, duracion = 800, sufijo = '') {
+  const el = typeof elemento === 'string' ? document.getElementById(elemento) : elemento;
+  if (!el) return;
+
+  const target = Number(valorFinal) || 0;
+  if (target === 0) {
+    el.textContent = `0${sufijo}`;
+    return;
+  }
+
+  const startTime = performance.now();
+  const startVal = 0;
+
+  function actualizar(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duracion, 1);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const actual = Math.floor(startVal + (target - startVal) * easeOut);
+    el.textContent = `${actual}${sufijo}`;
+
+    if (progress < 1) {
+      requestAnimationFrame(actualizar);
+    } else {
+      el.textContent = `${target}${sufijo}`;
+    }
+  }
+
+  requestAnimationFrame(actualizar);
+}
