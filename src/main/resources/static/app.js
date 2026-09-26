@@ -489,14 +489,71 @@ function renderizarEncuentros(lista) {
     const localColor = localGana ? 'color:var(--text-main);' : 'color:var(--text-muted);';
     const visitanteColor = visitanteGana ? 'color:var(--text-main);' : 'color:var(--text-muted);';
 
+    // Estado Badge
+    const estado = (enc.estado || 'FINALIZADO').toUpperCase();
+    let badgeEstadoHtml = '';
+    if (estado === 'FINALIZADO') {
+      badgeEstadoHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Finalizado</span>`;
+    } else if (estado === 'EN_JUEGO') {
+      badgeEstadoHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-500 border border-rose-500/30 animate-pulse">● En Vivo</span>`;
+    } else if (estado === 'PROGRAMADO') {
+      badgeEstadoHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-500 border border-sky-500/20">Programado</span>`;
+    } else {
+      badgeEstadoHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">${escapeHtml(estado)}</span>`;
+    }
+
+    const jornadaBadge = enc.jornada ? `<span class="badge-chip">Jor. ${enc.jornada}</span>` : '';
+    const horaText = enc.hora ? ` &bull; ${escapeHtml(enc.hora)}` : '';
+    const estadioText = enc.estadio ? `<span class="truncate max-w-[170px]" title="${escapeHtml(enc.estadio)}"><i class="bi bi-geo-alt me-1 text-slate-400"></i>${escapeHtml(enc.estadio)}</span>` : '';
+    const arbitroText = enc.arbitro ? `<span class="truncate max-w-[140px]" title="Árbitro: ${escapeHtml(enc.arbitro)}"><i class="bi bi-person-badge me-1 text-slate-400"></i>${escapeHtml(enc.arbitro)}</span>` : '';
+
+    // Disciplina y estadísticas
+    const amLoc = enc.tarjetasAmarillasLocal || 0;
+    const rojLoc = enc.tarjetasRojasLocal || 0;
+    const amVis = enc.tarjetasAmarillasVisitante || 0;
+    const rojVis = enc.tarjetasRojasVisitante || 0;
+    const tirLoc = enc.tirosLocal || 0;
+    const tirVis = enc.tirosVisitante || 0;
+    const posLoc = enc.posesionLocal != null ? enc.posesionLocal : 50;
+    const posVis = enc.posesionVisitante != null ? enc.posesionVisitante : 50;
+
+    const tieneEstadisticas = (amLoc > 0 || rojLoc > 0 || amVis > 0 || rojVis > 0 || tirLoc > 0 || tirVis > 0);
+
+    let statsRowHtml = '';
+    if (tieneEstadisticas) {
+      statsRowHtml = `
+        <div class="mt-2.5 pt-2 border-t flex items-center justify-between text-[11px]"
+             style="border-color: var(--border-subtle); color: var(--text-muted);">
+          <div class="flex items-center gap-2">
+            ${amLoc > 0 ? `<span title="${amLoc} amarillas local">🟨 ${amLoc}</span>` : ''}
+            ${rojLoc > 0 ? `<span title="${rojLoc} rojas local">🟥 ${rojLoc}</span>` : ''}
+            ${tirLoc > 0 ? `<span title="${tirLoc} tiros">🎯 ${tirLoc}</span>` : ''}
+          </div>
+          <div class="text-[10px] font-mono px-2 py-0.5 rounded" style="background: var(--pill-bg);" title="Posesión de balón">
+            ${posLoc}% - ${posVis}%
+          </div>
+          <div class="flex items-center gap-2">
+            ${tirVis > 0 ? `<span title="${tirVis} tiros">🎯 ${tirVis}</span>` : ''}
+            ${amVis > 0 ? `<span title="${amVis} amarillas visitante">🟨 ${amVis}</span>` : ''}
+            ${rojVis > 0 ? `<span title="${rojVis} rojas visitante">🟥 ${rojVis}</span>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
     card.innerHTML = `
       <div>
+        <!-- Card Header Info -->
         <div class="flex items-center justify-between text-xs mb-3 pb-2"
              style="border-bottom:1px solid var(--border-subtle); color:var(--text-muted);">
-          <span class="flex items-center gap-1.5 font-medium">
-            <i class="bi bi-calendar3"></i> ${fechaFormateada}
-          </span>
-          <span class="font-mono text-[11px]">Partido #${enc.id}</span>
+          <div class="flex items-center gap-2 flex-wrap">
+            ${badgeEstadoHtml}
+            ${jornadaBadge}
+            <span class="flex items-center gap-1 font-medium">
+              <i class="bi bi-calendar3"></i> ${fechaFormateada}${horaText}
+            </span>
+          </div>
+          <span class="font-mono text-[11px]">#${enc.id}</span>
         </div>
 
         <!-- Scoreboard Fixture Row -->
@@ -526,26 +583,35 @@ function renderizarEncuentros(lista) {
             </span>
           </div>
         </div>
+
+        ${statsRowHtml}
       </div>
 
-      <!-- Actions -->
-      <div class="pt-2.5 mt-3 flex items-center justify-end gap-1.5"
+      <!-- Sede, Árbitro y Acciones -->
+      <div class="pt-2.5 mt-3 flex items-center justify-between gap-2 flex-wrap"
            style="border-top:1px solid var(--border-subtle);">
-        <button onclick="prepararEdicionEncuentro(${enc.id})"
-                class="btn-action-ghost text-xs px-2.5 py-1">
-          Editar
-        </button>
-        <button onclick="confirmarEliminarEncuentro(${enc.id})"
-                class="px-2.5 py-1 rounded text-xs font-medium transition-colors"
-                style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#ef4444;"
-                onmouseover="this.style.background='rgba(239,68,68,0.15)'"
-                onmouseout="this.style.background='rgba(239,68,68,0.08)'">
-          Eliminar
-        </button>
+        <div class="flex items-center gap-3 text-[11px]" style="color:var(--text-muted);">
+          ${estadioText}
+          ${arbitroText}
+        </div>
+        <div class="flex items-center gap-1.5 ms-auto">
+          <button onclick="prepararEdicionEncuentro(${enc.id})"
+                  class="btn-action-ghost text-xs px-2.5 py-1">
+            Editar
+          </button>
+          <button onclick="confirmarEliminarEncuentro(${enc.id})"
+                  class="px-2.5 py-1 rounded text-xs font-medium transition-colors"
+                  style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#ef4444;"
+                  onmouseover="this.style.background='rgba(239,68,68,0.15)'"
+                  onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+            Eliminar
+          </button>
+        </div>
       </div>
     `;
     container.appendChild(card);
   });
+
 }
 
 
@@ -700,8 +766,24 @@ function abrirModalNuevoEncuentro() {
   document.getElementById('alertaMismoEquipo').classList.add('hidden');
   document.getElementById('formEncuentro').classList.remove('was-validated');
 
+  // Valores predeterminados profesionales
   const hoy = new Date().toISOString().split('T')[0];
   document.getElementById('encuentroFecha').value = hoy;
+  document.getElementById('encuentroHora').value = '15:30';
+  document.getElementById('encuentroJornada').value = (encuentrosCache ? Math.floor(encuentrosCache.length / 2) + 1 : 1);
+  document.getElementById('encuentroEstado').value = 'FINALIZADO';
+  document.getElementById('encuentroEstadio').value = '';
+  document.getElementById('encuentroArbitro').value = '';
+
+  document.getElementById('amarillasLocal').value = 0;
+  document.getElementById('rojasLocal').value = 0;
+  document.getElementById('tirosLocal').value = 0;
+  document.getElementById('posesionLocal').value = 50;
+
+  document.getElementById('amarillasVisitante').value = 0;
+  document.getElementById('rojasVisitante').value = 0;
+  document.getElementById('tirosVisitante').value = 0;
+  document.getElementById('posesionVisitante').value = 50;
 
   poblarSelectsEquipos(equiposCache);
   if (modalEncuentroBS) modalEncuentroBS.show();
@@ -715,10 +797,26 @@ async function prepararEdicionEncuentro(id) {
     const enc = await res.json();
 
     document.getElementById('encuentroId').value = enc.id;
-    document.getElementById('modalEncuentroTitulo').textContent = 'Editar Partido';
+    document.getElementById('modalEncuentroTitulo').textContent = 'Editar Partido #' + enc.id;
     document.getElementById('golesLocal').value = enc.golesLocal;
     document.getElementById('golesVisitante').value = enc.golesVisitante;
     document.getElementById('encuentroFecha').value = enc.fecha;
+    document.getElementById('encuentroHora').value = enc.hora || '15:30';
+    document.getElementById('encuentroJornada').value = enc.jornada || 1;
+    document.getElementById('encuentroEstado').value = enc.estado || 'FINALIZADO';
+    document.getElementById('encuentroEstadio').value = enc.estadio || '';
+    document.getElementById('encuentroArbitro').value = enc.arbitro || '';
+
+    document.getElementById('amarillasLocal').value = enc.tarjetasAmarillasLocal ?? 0;
+    document.getElementById('rojasLocal').value = enc.tarjetasRojasLocal ?? 0;
+    document.getElementById('tirosLocal').value = enc.tirosLocal ?? 0;
+    document.getElementById('posesionLocal').value = enc.posesionLocal ?? 50;
+
+    document.getElementById('amarillasVisitante').value = enc.tarjetasAmarillasVisitante ?? 0;
+    document.getElementById('rojasVisitante').value = enc.tarjetasRojasVisitante ?? 0;
+    document.getElementById('tirosVisitante').value = enc.tirosVisitante ?? 0;
+    document.getElementById('posesionVisitante').value = enc.posesionVisitante ?? 50;
+
     document.getElementById('alertaMismoEquipo').classList.add('hidden');
     document.getElementById('formEncuentro').classList.remove('was-validated');
 
@@ -765,7 +863,20 @@ async function manejarSubmitEncuentro(e) {
     equipoVisitanteId: Number(equipoVisitanteId),
     golesLocal,
     golesVisitante,
-    fecha
+    fecha,
+    hora: document.getElementById('encuentroHora').value || '15:30',
+    jornada: parseInt(document.getElementById('encuentroJornada').value, 10) || 1,
+    estado: document.getElementById('encuentroEstado').value || 'FINALIZADO',
+    estadio: document.getElementById('encuentroEstadio').value.trim(),
+    arbitro: document.getElementById('encuentroArbitro').value.trim(),
+    tarjetasAmarillasLocal: parseInt(document.getElementById('amarillasLocal').value, 10) || 0,
+    tarjetasAmarillasVisitante: parseInt(document.getElementById('amarillasVisitante').value, 10) || 0,
+    tarjetasRojasLocal: parseInt(document.getElementById('rojasLocal').value, 10) || 0,
+    tarjetasRojasVisitante: parseInt(document.getElementById('rojasVisitante').value, 10) || 0,
+    tirosLocal: parseInt(document.getElementById('tirosLocal').value, 10) || 0,
+    tirosVisitante: parseInt(document.getElementById('tirosVisitante').value, 10) || 0,
+    posesionLocal: parseInt(document.getElementById('posesionLocal').value, 10) || 50,
+    posesionVisitante: parseInt(document.getElementById('posesionVisitante').value, 10) || 50
   };
 
   const esEdicion = Boolean(id);

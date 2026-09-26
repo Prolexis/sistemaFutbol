@@ -43,6 +43,19 @@ public class EncuentroServiceImpl implements EncuentroService {
                 .golesLocal(request.getGolesLocal())
                 .golesVisitante(request.getGolesVisitante())
                 .fecha(request.getFecha())
+                .hora(request.getHora() != null && !request.getHora().isBlank() ? request.getHora().trim() : "15:30")
+                .jornada(request.getJornada() != null ? request.getJornada() : 1)
+                .estadio(request.getEstadio() != null && !request.getEstadio().isBlank() ? request.getEstadio().trim() : "Estadio " + local.getNombre())
+                .arbitro(request.getArbitro() != null && !request.getArbitro().isBlank() ? request.getArbitro().trim() : "Árbitro Oficial")
+                .estado(request.getEstado() != null && !request.getEstado().isBlank() ? request.getEstado() : "FINALIZADO")
+                .tarjetasAmarillasLocal(request.getTarjetasAmarillasLocal() != null ? request.getTarjetasAmarillasLocal() : 0)
+                .tarjetasAmarillasVisitante(request.getTarjetasAmarillasVisitante() != null ? request.getTarjetasAmarillasVisitante() : 0)
+                .tarjetasRojasLocal(request.getTarjetasRojasLocal() != null ? request.getTarjetasRojasLocal() : 0)
+                .tarjetasRojasVisitante(request.getTarjetasRojasVisitante() != null ? request.getTarjetasRojasVisitante() : 0)
+                .tirosLocal(request.getTirosLocal() != null ? request.getTirosLocal() : 0)
+                .tirosVisitante(request.getTirosVisitante() != null ? request.getTirosVisitante() : 0)
+                .posesionLocal(request.getPosesionLocal() != null ? request.getPosesionLocal() : 50)
+                .posesionVisitante(request.getPosesionVisitante() != null ? request.getPosesionVisitante() : 50)
                 .build();
 
         Encuentro guardado = encuentroRepository.save(encuentro);
@@ -83,6 +96,19 @@ public class EncuentroServiceImpl implements EncuentroService {
         encuentro.setGolesLocal(request.getGolesLocal());
         encuentro.setGolesVisitante(request.getGolesVisitante());
         encuentro.setFecha(request.getFecha());
+        encuentro.setHora(request.getHora() != null && !request.getHora().isBlank() ? request.getHora().trim() : "15:30");
+        encuentro.setJornada(request.getJornada() != null ? request.getJornada() : 1);
+        encuentro.setEstadio(request.getEstadio() != null && !request.getEstadio().isBlank() ? request.getEstadio().trim() : "Estadio " + local.getNombre());
+        encuentro.setArbitro(request.getArbitro() != null && !request.getArbitro().isBlank() ? request.getArbitro().trim() : "Árbitro Oficial");
+        encuentro.setEstado(request.getEstado() != null && !request.getEstado().isBlank() ? request.getEstado() : "FINALIZADO");
+        encuentro.setTarjetasAmarillasLocal(request.getTarjetasAmarillasLocal() != null ? request.getTarjetasAmarillasLocal() : 0);
+        encuentro.setTarjetasAmarillasVisitante(request.getTarjetasAmarillasVisitante() != null ? request.getTarjetasAmarillasVisitante() : 0);
+        encuentro.setTarjetasRojasLocal(request.getTarjetasRojasLocal() != null ? request.getTarjetasRojasLocal() : 0);
+        encuentro.setTarjetasRojasVisitante(request.getTarjetasRojasVisitante() != null ? request.getTarjetasRojasVisitante() : 0);
+        encuentro.setTirosLocal(request.getTirosLocal() != null ? request.getTirosLocal() : 0);
+        encuentro.setTirosVisitante(request.getTirosVisitante() != null ? request.getTirosVisitante() : 0);
+        encuentro.setPosesionLocal(request.getPosesionLocal() != null ? request.getPosesionLocal() : 50);
+        encuentro.setPosesionVisitante(request.getPosesionVisitante() != null ? request.getPosesionVisitante() : 50);
 
         Encuentro actualizado = encuentroRepository.save(encuentro);
         return mapToResponseDTO(actualizado);
@@ -122,8 +148,12 @@ public class EncuentroServiceImpl implements EncuentroService {
             tablaMap.put(eq.getId(), fila);
         }
 
-        // 2. Procesar cada encuentro
+        // 2. Procesar cada encuentro (solo partidos finalizados computan puntos y goles para la tabla)
         for (Encuentro match : todosEncuentros) {
+            if (match.getEstado() != null && (match.getEstado().equalsIgnoreCase("PROGRAMADO") || match.getEstado().equalsIgnoreCase("SUSPENDIDO"))) {
+                continue;
+            }
+
             Long idLocal = match.getEquipoLocal().getId();
             Long idVisitante = match.getEquipoVisitante().getId();
 
@@ -259,6 +289,20 @@ public class EncuentroServiceImpl implements EncuentroService {
                 .golesLocal(e.getGolesLocal())
                 .golesVisitante(e.getGolesVisitante())
                 .fecha(e.getFecha())
+                .hora(e.getHora() != null ? e.getHora() : "15:30")
+                .jornada(e.getJornada() != null ? e.getJornada() : 1)
+                .estadio(e.getEstadio() != null ? e.getEstadio() : "Estadio " + e.getEquipoLocal().getNombre())
+                .arbitro(e.getArbitro() != null ? e.getArbitro() : "Árbitro Oficial")
+                .estado(e.getEstado() != null ? e.getEstado() : "FINALIZADO")
+                .tarjetasAmarillasLocal(e.getTarjetasAmarillasLocal() != null ? e.getTarjetasAmarillasLocal() : 0)
+                .tarjetasAmarillasVisitante(e.getTarjetasAmarillasVisitante() != null ? e.getTarjetasAmarillasVisitante() : 0)
+                .tarjetasRojasLocal(e.getTarjetasRojasLocal() != null ? e.getTarjetasRojasLocal() : 0)
+                .tarjetasRojasVisitante(e.getTarjetasRojasVisitante() != null ? e.getTarjetasRojasVisitante() : 0)
+                .tirosLocal(e.getTirosLocal() != null ? e.getTirosLocal() : 0)
+                .tirosVisitante(e.getTirosVisitante() != null ? e.getTirosVisitante() : 0)
+                .posesionLocal(e.getPosesionLocal() != null ? e.getPosesionLocal() : 50)
+                .posesionVisitante(e.getPosesionVisitante() != null ? e.getPosesionVisitante() : 50)
                 .build();
     }
 }
+

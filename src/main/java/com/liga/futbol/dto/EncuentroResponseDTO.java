@@ -17,4 +17,20 @@ public class EncuentroResponseDTO {
     private Integer golesLocal;
     private Integer golesVisitante;
     private LocalDate fecha;
+    private String hora;
+    private Integer jornada;
+    private String estadio;
+    private String arbitro;
+    private String estado;
+
+    private Integer tarjetasAmarillasLocal;
+    private Integer tarjetasAmarillasVisitante;
+    private Integer tarjetasRojasLocal;
+    private Integer tarjetasRojasVisitante;
+
+    private Integer tirosLocal;
+    private Integer tirosVisitante;
+    private Integer posesionLocal;
+    private Integer posesionVisitante;
 }
+

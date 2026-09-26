@@ -1197,7 +1197,7 @@
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
           </div>
-          <div class="modal-body p-5 space-y-4">
+          <div class="modal-body p-5 space-y-5">
             <input type="hidden" id="encuentroId" value="">
 
             <!-- Same-team alert -->
@@ -1208,48 +1208,175 @@
               <span>Un equipo no puede enfrentarse a sí mismo. Por favor selecciona rivales distintos.</span>
             </div>
 
-            <!-- Teams & Score Row -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl"
+            <!-- SECCIÓN 1: EQUIPOS, MARCADOR Y DISCIPLINA -->
+            <div class="p-4 rounded-xl space-y-4"
                  style="background: var(--pill-bg); border: 1px solid var(--border-subtle);">
-              <!-- Local -->
-              <div class="space-y-3">
-                <span class="text-xs font-bold uppercase tracking-wider block" style="color: var(--text-main);">Equipo Local</span>
-                <div>
-                  <label for="selectEquipoLocal" class="block text-xs mb-1" style="color: var(--text-muted);">Club *</label>
-                  <select id="selectEquipoLocal" class="form-select text-xs sm:text-sm" required>
-                    <option value="" disabled selected>Seleccione local...</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="golesLocal" class="block text-xs mb-1" style="color: var(--text-muted);">Goles *</label>
-                  <input type="number" min="0" value="0"
-                         class="form-control text-center text-lg font-bold" id="golesLocal" required>
-                </div>
+              <div class="flex items-center justify-between pb-2 border-b" style="border-color: var(--border-subtle);">
+                <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-main);">
+                  <i class="bi bi-trophy me-1 text-amber-500"></i> Marcador y Clubes
+                </span>
+                <span class="text-[11px]" style="color: var(--text-muted);">Estadísticas de campo</span>
               </div>
-              <!-- Visitante -->
-              <div class="space-y-3">
-                <span class="text-xs font-bold uppercase tracking-wider block" style="color: var(--text-main);">Equipo Visitante</span>
-                <div>
-                  <label for="selectEquipoVisitante" class="block text-xs mb-1" style="color: var(--text-muted);">Club *</label>
-                  <select id="selectEquipoVisitante" class="form-select text-xs sm:text-sm" required>
-                    <option value="" disabled selected>Seleccione visitante...</option>
-                  </select>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Local -->
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--accent-blue);">Equipo Local</span>
+                    <span class="badge-chip">Local</span>
+                  </div>
+                  <div>
+                    <label for="selectEquipoLocal" class="block text-xs mb-1" style="color: var(--text-muted);">Club *</label>
+                    <select id="selectEquipoLocal" class="form-select text-xs sm:text-sm" required>
+                      <option value="" disabled selected>Seleccione local...</option>
+                    </select>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label for="golesLocal" class="block text-xs mb-1 font-semibold" style="color: var(--text-main);">Goles *</label>
+                      <input type="number" min="0" value="0"
+                             class="form-control text-center text-lg font-bold" id="golesLocal" required>
+                    </div>
+                    <div>
+                      <label for="posesionLocal" class="block text-xs mb-1" style="color: var(--text-muted);">Posesión %</label>
+                      <input type="number" min="0" max="100" value="50"
+                             class="form-control text-center text-sm" id="posesionLocal" placeholder="50">
+                    </div>
+                  </div>
+                  <!-- Tarjetas y Tiros Local -->
+                  <div class="grid grid-cols-3 gap-1.5 pt-1">
+                    <div>
+                      <label for="amarillasLocal" class="block text-[11px] mb-1" title="Tarjetas Amarillas">
+                        🟨 Amarillas
+                      </label>
+                      <input type="number" min="0" value="0"
+                             class="form-control text-center text-xs py-1 px-1" id="amarillasLocal">
+                    </div>
+                    <div>
+                      <label for="rojasLocal" class="block text-[11px] mb-1" title="Tarjetas Rojas">
+                        🟥 Rojas
+                      </label>
+                      <input type="number" min="0" value="0"
+                             class="form-control text-center text-xs py-1 px-1" id="rojasLocal">
+                    </div>
+                    <div>
+                      <label for="tirosLocal" class="block text-[11px] mb-1" title="Tiros al arco">
+                        🎯 Tiros
+                      </label>
+                      <input type="number" min="0" value="0"
+                             class="form-control text-center text-xs py-1 px-1" id="tirosLocal">
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label for="golesVisitante" class="block text-xs mb-1" style="color: var(--text-muted);">Goles *</label>
-                  <input type="number" min="0" value="0"
-                         class="form-control text-center text-lg font-bold" id="golesVisitante" required>
+
+                <!-- Visitante -->
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-main);">Equipo Visitante</span>
+                    <span class="badge-chip">Visitante</span>
+                  </div>
+                  <div>
+                    <label for="selectEquipoVisitante" class="block text-xs mb-1" style="color: var(--text-muted);">Club *</label>
+                    <select id="selectEquipoVisitante" class="form-select text-xs sm:text-sm" required>
+                      <option value="" disabled selected>Seleccione visitante...</option>
+                    </select>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label for="golesVisitante" class="block text-xs mb-1 font-semibold" style="color: var(--text-main);">Goles *</label>
+                      <input type="number" min="0" value="0"
+                             class="form-control text-center text-lg font-bold" id="golesVisitante" required>
+                    </div>
+                    <div>
+                      <label for="posesionVisitante" class="block text-xs mb-1" style="color: var(--text-muted);">Posesión %</label>
+                      <input type="number" min="0" max="100" value="50"
+                             class="form-control text-center text-sm" id="posesionVisitante" placeholder="50">
+                    </div>
+                  </div>
+                  <!-- Tarjetas y Tiros Visitante -->
+                  <div class="grid grid-cols-3 gap-1.5 pt-1">
+                    <div>
+                      <label for="amarillasVisitante" class="block text-[11px] mb-1" title="Tarjetas Amarillas">
+                        🟨 Amarillas
+                      </label>
+                      <input type="number" min="0" value="0"
+                             class="form-control text-center text-xs py-1 px-1" id="amarillasVisitante">
+                    </div>
+                    <div>
+                      <label for="rojasVisitante" class="block text-[11px] mb-1" title="Tarjetas Rojas">
+                        🟥 Rojas
+                      </label>
+                      <input type="number" min="0" value="0"
+                             class="form-control text-center text-xs py-1 px-1" id="rojasVisitante">
+                    </div>
+                    <div>
+                      <label for="tirosVisitante" class="block text-[11px] mb-1" title="Tiros al arco">
+                        🎯 Tiros
+                      </label>
+                      <input type="number" min="0" value="0"
+                             class="form-control text-center text-xs py-1 px-1" id="tirosVisitante">
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Date -->
-            <div>
-              <label for="encuentroFecha" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
-                Fecha del Encuentro <span style="color: #ef4444;">*</span>
-              </label>
-              <input type="date" class="form-control text-xs sm:text-sm" id="encuentroFecha" required>
-              <div class="invalid-feedback text-xs">Por favor selecciona la fecha.</div>
+            <!-- SECCIÓN 2: PROGRAMACIÓN Y ESTADO DEL ENCUENTRO -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <label for="encuentroJornada" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
+                  Jornada / Fecha #
+                </label>
+                <div class="relative">
+                  <input type="number" min="1" max="50" value="1" class="form-control text-xs sm:text-sm" id="encuentroJornada" placeholder="1">
+                </div>
+              </div>
+
+              <div>
+                <label for="encuentroEstado" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
+                  Estado del Partido
+                </label>
+                <select id="encuentroEstado" class="form-select text-xs sm:text-sm">
+                  <option value="FINALIZADO" selected>🟢 Finalizado</option>
+                  <option value="EN_JUEGO">🔴 En Juego (En Vivo)</option>
+                  <option value="PROGRAMADO">🔵 Programado</option>
+                  <option value="SUSPENDIDO">🟡 Suspendido</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="encuentroFecha" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
+                  Fecha <span style="color: #ef4444;">*</span>
+                </label>
+                <input type="date" class="form-control text-xs sm:text-sm" id="encuentroFecha" required>
+                <div class="invalid-feedback text-xs">Selecciona fecha.</div>
+              </div>
+
+              <div>
+                <label for="encuentroHora" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
+                  Hora (Inicio)
+                </label>
+                <input type="time" class="form-control text-xs sm:text-sm" id="encuentroHora" value="15:30">
+              </div>
+            </div>
+
+            <!-- SECCIÓN 3: SEDE Y ÁRBITRO -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label for="encuentroEstadio" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
+                  <i class="bi bi-geo-alt me-1 text-slate-400"></i> Estadio / Sede
+                </label>
+                <input type="text" class="form-control text-xs sm:text-sm" id="encuentroEstadio"
+                       placeholder="Ej: Estadio Alejandro Villanueva, Monumental..." maxlength="150">
+              </div>
+
+              <div>
+                <label for="encuentroArbitro" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
+                  <i class="bi bi-person-badge me-1 text-slate-400"></i> Árbitro Principal
+                </label>
+                <input type="text" class="form-control text-xs sm:text-sm" id="encuentroArbitro"
+                       placeholder="Ej: Kevin Ortega, Diego Haro..." maxlength="100">
+              </div>
             </div>
 
           </div>
@@ -1319,7 +1446,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 
 </body>
 </html>

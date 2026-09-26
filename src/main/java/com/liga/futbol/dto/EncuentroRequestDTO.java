@@ -29,4 +29,21 @@ public class EncuentroRequestDTO {
 
     @NotNull(message = "La fecha del encuentro es obligatoria.")
     private LocalDate fecha;
+
+    private String hora;
+    private Integer jornada;
+    private String estadio;
+    private String arbitro;
+    private String estado;
+
+    private Integer tarjetasAmarillasLocal;
+    private Integer tarjetasAmarillasVisitante;
+    private Integer tarjetasRojasLocal;
+    private Integer tarjetasRojasVisitante;
+
+    private Integer tirosLocal;
+    private Integer tirosVisitante;
+    private Integer posesionLocal;
+    private Integer posesionVisitante;
 }
+
