@@ -21,4 +21,7 @@ public class Equipo {
 
     @Column(nullable = false, length = 100)
     private String ciudad;
+
+    @Column(length = 150)
+    private String estadio;
 }

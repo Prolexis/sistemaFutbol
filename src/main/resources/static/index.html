@@ -900,6 +900,11 @@
               <i class="bi bi-filetype-csv text-sm" style="color: #10b981;"></i>
               <span>CSV</span>
             </button>
+            <button id="btnExportarPosicionesExcel"
+                    class="btn-action-ghost text-xs">
+              <i class="bi bi-file-earmark-excel text-sm" style="color: #16a34a;"></i>
+              <span>Excel</span>
+            </button>
             <button id="btnExportarPosicionesPDF"
                     class="btn-action-ghost text-xs">
               <i class="bi bi-file-earmark-pdf text-sm" style="color: #ef4444;"></i>
@@ -1175,6 +1180,14 @@
                      placeholder="Ej: Lima, Arequipa, Trujillo..." required maxlength="100">
               <div class="invalid-feedback text-xs">Ingresa la ciudad sede.</div>
             </div>
+
+            <div>
+              <label for="equipoEstadio" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
+                Estadio / Sede Principal
+              </label>
+              <input type="text" class="form-control" id="equipoEstadio"
+                     placeholder="Ej: Estadio Monumental U, Estadio Alejandro Villanueva..." maxlength="150">
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button"
@@ -1368,19 +1381,40 @@
             <!-- SECCIÓN 3: SEDE Y ÁRBITRO -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label for="encuentroEstadio" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
-                  <i class="bi bi-geo-alt me-1 text-slate-400"></i> Estadio / Sede
-                </label>
-                <input type="text" class="form-control text-xs sm:text-sm" id="encuentroEstadio"
-                       placeholder="Ej: Estadio Alejandro Villanueva, Monumental..." maxlength="150">
+                <div class="flex items-center justify-between mb-1">
+                  <label for="encuentroEstadio" class="block text-xs font-semibold mb-0" style="color: var(--text-main);">
+                    <i class="bi bi-geo-alt me-1 text-slate-400"></i> Estadio / Sede del Partido
+                  </label>
+                  <button type="button" id="btnToggleExcepcionEstadio"
+                          class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                    <i class="bi bi-pencil-square"></i>
+                    <span>Cambiar por excepción</span>
+                  </button>
+                </div>
+                <select id="encuentroEstadio" class="form-select text-xs sm:text-sm" disabled>
+                  <option value="" disabled selected>Seleccione estadio...</option>
+                </select>
+                <div id="contenedorEstadioCustom" class="hidden mt-2">
+                  <input type="text" class="form-control text-xs sm:text-sm" id="encuentroEstadioCustom"
+                         placeholder="Escribe el nombre del estadio de excepción..." maxlength="150">
+                </div>
+                <p class="text-[11px] mt-1 mb-0" style="color: var(--text-muted);" id="ayudaEstadioTexto">
+                  <i class="bi bi-info-circle me-1"></i>Asignado automáticamente según la Sede Local.
+                </p>
               </div>
 
               <div>
                 <label for="encuentroArbitro" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
                   <i class="bi bi-person-badge me-1 text-slate-400"></i> Árbitro Principal
                 </label>
-                <input type="text" class="form-control text-xs sm:text-sm" id="encuentroArbitro"
-                       placeholder="Ej: Kevin Ortega, Diego Haro..." maxlength="100">
+                <select id="encuentroArbitro" class="form-select text-xs sm:text-sm">
+                  <option value="" disabled selected>Seleccione árbitro...</option>
+                  <option value="Diego Haro">Diego Haro</option>
+                  <option value="Kevin Ortega">Kevin Ortega</option>
+                  <option value="Víctor Hugo Carrillo">Víctor Hugo Carrillo</option>
+                  <option value="Bruno Pérez">Bruno Pérez</option>
+                  <option value="Michael Espinoza">Michael Espinoza</option>
+                </select>
               </div>
             </div>
 

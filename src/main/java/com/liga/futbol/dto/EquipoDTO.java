@@ -20,4 +20,7 @@ public class EquipoDTO {
     @NotBlank(message = "La ciudad del equipo no puede estar vacía.")
     @Size(min = 2, max = 100, message = "La ciudad debe tener entre 2 y 100 caracteres.")
     private String ciudad;
+
+    @Size(max = 150, message = "El estadio no puede superar los 150 caracteres.")
+    private String estadio;
 }

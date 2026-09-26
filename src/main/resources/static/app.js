@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Validación dinámica en formulario de partidos: evitar mismo equipo
+  // Validación dinámica en formulario de partidos: evitar mismo equipo y actualizar estadios
   const selLocal = document.getElementById('selectEquipoLocal');
   const selVisitante = document.getElementById('selectEquipoVisitante');
   const alertaMismo = document.getElementById('alertaMismoEquipo');
@@ -207,10 +207,63 @@ document.addEventListener('DOMContentLoaded', () => {
         alertaMismo.classList.add('hidden');
       }
     }
+    actualizarComboboxEstadios();
   }
 
   if (selLocal) selLocal.addEventListener('change', verificarEquiposIguales);
   if (selVisitante) selVisitante.addEventListener('change', verificarEquiposIguales);
+
+  // Escuchar cambio en combobox de Estadio para mostrar input custom si se elige excepción
+  const selEstadio = document.getElementById('encuentroEstadio');
+  const contenedorCustom = document.getElementById('contenedorEstadioCustom');
+  if (selEstadio) {
+    selEstadio.addEventListener('change', () => {
+      if (selEstadio.value === '__CUSTOM__') {
+        if (contenedorCustom) contenedorCustom.classList.remove('hidden');
+        document.getElementById('encuentroEstadioCustom')?.focus();
+      } else {
+        if (contenedorCustom) contenedorCustom.classList.add('hidden');
+      }
+    });
+  }
+
+  // Botón para habilitar/deshabilitar cambio de sede por excepción
+  const btnToggleEstadio = document.getElementById('btnToggleExcepcionEstadio');
+  if (btnToggleEstadio) {
+    btnToggleEstadio.addEventListener('click', () => {
+      const elEstadio = document.getElementById('encuentroEstadio');
+      if (!elEstadio) return;
+      if (elEstadio.disabled) {
+        elEstadio.disabled = false;
+        actualizarComboboxEstadios(elEstadio.value, true);
+        mostrarToast('Se ha habilitado la selección de estadio por excepción.', 'info');
+      } else {
+        actualizarComboboxEstadios(null, false);
+        mostrarToast('Se ha restablecido la Sede Local automática.', 'info');
+      }
+    });
+  }
+
+  // Posesión de balón complementaria automática (Local + Visitante = 100%)
+  const inputPosLocal = document.getElementById('posesionLocal');
+  const inputPosVisitante = document.getElementById('posesionVisitante');
+  if (inputPosLocal && inputPosVisitante) {
+    inputPosLocal.addEventListener('input', () => {
+      let val = parseInt(inputPosLocal.value, 10);
+      if (isNaN(val)) val = 0;
+      if (val < 0) val = 0;
+      if (val > 100) val = 100;
+      inputPosVisitante.value = 100 - val;
+    });
+
+    inputPosVisitante.addEventListener('input', () => {
+      let val = parseInt(inputPosVisitante.value, 10);
+      if (isNaN(val)) val = 0;
+      if (val < 0) val = 0;
+      if (val > 100) val = 100;
+      inputPosLocal.value = 100 - val;
+    });
+  }
 
   // Búsqueda en vivo de equipos (debounce 250ms)
   let debounceEquiposTimer = null;
@@ -234,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnLimpiarEncuentros.addEventListener('click', limpiarFiltroEncuentros);
   }
 
-  // Exportar PDF y CSV
+  // Exportar PDF, CSV y Excel
   const btnExportarPdf = document.getElementById('btnExportarPosicionesPDF');
   if (btnExportarPdf) {
     btnExportarPdf.addEventListener('click', exportarPosicionesPDF);
@@ -242,6 +295,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnExportarCsv = document.getElementById('btnExportarPosicionesCSV');
   if (btnExportarCsv) {
     btnExportarCsv.addEventListener('click', exportarPosicionesCSV);
+  }
+  const btnExportarExcel = document.getElementById('btnExportarPosicionesExcel');
+  if (btnExportarExcel) {
+    btnExportarExcel.addEventListener('click', exportarPosicionesExcel);
   }
 
   // Botón refresco Dashboard
@@ -437,9 +494,13 @@ function renderizarEquipos(lista) {
           ${escapeHtml(equipo.nombre)}
         </h3>
 
-        <div class="flex items-center text-xs mb-3" style="color:var(--text-muted);">
+        <div class="flex items-center text-xs mb-1" style="color:var(--text-muted);">
           <i class="bi bi-geo-alt me-1"></i>
           <span>${escapeHtml(equipo.ciudad)}</span>
+        </div>
+        <div class="flex items-center text-xs mb-3" style="color:var(--text-muted);" title="Estadio principal">
+          <i class="bi bi-bank me-1 text-slate-400"></i>
+          <span class="truncate">${escapeHtml(equipo.estadio || 'Sin estadio registrado')}</span>
         </div>
       </div>
 
@@ -618,7 +679,7 @@ function renderizarEncuentros(lista) {
 /**
  * Llena selects de equipos en modales y filtros
  */
-function poblarSelectsEquipos(equipos, selectedLocalId = null, selectedVisitanteId = null) {
+function poblarSelectsEquipos(equipos, selectedLocalId = null, selectedVisitanteId = null, selectedEstadio = null) {
   const selLocal = document.getElementById('selectEquipoLocal');
   const selVisitante = document.getElementById('selectEquipoVisitante');
   const selFiltro = document.getElementById('filtroEquipoEncuentro');
@@ -662,6 +723,93 @@ function poblarSelectsEquipos(equipos, selectedLocalId = null, selectedVisitante
       selVisitante.appendChild(optVis);
     });
   }
+
+  actualizarComboboxEstadios(selectedEstadio);
+}
+
+/**
+ * Llena dinámicamente el combobox de Estadios recuperados de los Equipos registrados.
+ * Recupera automáticamente el estadio del equipo Local seleccionado y soporta estadios de excepción.
+ */
+function actualizarComboboxEstadios(selectedEstadio = null, esExcepcionForzada = false) {
+  const selEstadio = document.getElementById('encuentroEstadio');
+  const contenedorCustom = document.getElementById('contenedorEstadioCustom');
+  const inputCustom = document.getElementById('encuentroEstadioCustom');
+  const ayudaTexto = document.getElementById('ayudaEstadioTexto');
+  if (!selEstadio) return;
+
+  const selLocal = document.getElementById('selectEquipoLocal');
+  const selVisitante = document.getElementById('selectEquipoVisitante');
+
+  const localId = selLocal ? selLocal.value : null;
+  const visitanteId = selVisitante ? selVisitante.value : null;
+
+  const localEq = equiposCache.find(e => String(e.id) === String(localId));
+  const visitanteEq = equiposCache.find(e => String(e.id) === String(visitanteId));
+
+  let estadiosSet = new Set();
+  
+  if (localEq && localEq.estadio) estadiosSet.add(localEq.estadio);
+  if (visitanteEq && visitanteEq.estadio) estadiosSet.add(visitanteEq.estadio);
+  equiposCache.forEach(e => {
+    if (e.estadio) estadiosSet.add(e.estadio);
+  });
+
+  selEstadio.innerHTML = '<option value="" disabled selected>Seleccione estadio...</option>';
+  
+  let fueEmparejado = false;
+
+  estadiosSet.forEach(estadio => {
+    const opt = document.createElement('option');
+    opt.value = estadio;
+    let label = estadio;
+    if (localEq && localEq.estadio === estadio) {
+      label += ` (Sede Local)`;
+    } else if (visitanteEq && visitanteEq.estadio === estadio) {
+      label += ` (Sede Visitante)`;
+    }
+    opt.textContent = label;
+    if (selectedEstadio && selectedEstadio === estadio) {
+      opt.selected = true;
+      fueEmparejado = true;
+    }
+    selEstadio.appendChild(opt);
+  });
+
+  // Opción para ingresar otro estadio (Excepción / Sede neutra)
+  const optCustom = document.createElement('option');
+  optCustom.value = '__CUSTOM__';
+  optCustom.textContent = '✏️ Otro estadio (Ingresar manualmente)...';
+  selEstadio.appendChild(optCustom);
+
+  // Auto-selección por defecto: Al seleccionar el equipo local, recupera automáticamente su estadio oficial
+  if (!selectedEstadio && localEq && localEq.estadio) {
+    selEstadio.value = localEq.estadio;
+    fueEmparejado = true;
+  }
+
+  // Manejo de estadios personalizados (Excepción)
+  if (selectedEstadio && !fueEmparejado) {
+    selEstadio.value = '__CUSTOM__';
+    if (contenedorCustom) contenedorCustom.classList.remove('hidden');
+    if (inputCustom) inputCustom.value = selectedEstadio;
+    esExcepcionForzada = true;
+  } else {
+    if (selEstadio.value !== '__CUSTOM__') {
+      if (contenedorCustom) contenedorCustom.classList.add('hidden');
+      if (inputCustom) inputCustom.value = '';
+    }
+  }
+
+  // Deshabilitado por defecto al autoseleccionar Sede Local; Habilitado si se activa el botón de excepción
+  const esExcepcion = esExcepcionForzada || (selectedEstadio && localEq && selectedEstadio !== localEq.estadio);
+  if (esExcepcion) {
+    selEstadio.disabled = false;
+    if (ayudaTexto) ayudaTexto.innerHTML = '<i class="bi bi-unlock me-1 text-amber-500"></i>Modo excepción activo: Puedes seleccionar otra sede o escribir una nueva.';
+  } else {
+    selEstadio.disabled = true;
+    if (ayudaTexto) ayudaTexto.innerHTML = '<i class="bi bi-info-circle me-1"></i>Asignado automáticamente según la Sede Local. Haz clic en "Cambiar por excepción" para modificarlo.';
+  }
 }
 
 // =====================================================================
@@ -686,6 +834,7 @@ async function prepararEdicionEquipo(id) {
     document.getElementById('equipoId').value = eq.id;
     document.getElementById('equipoNombre').value = eq.nombre;
     document.getElementById('equipoCiudad').value = eq.ciudad;
+    document.getElementById('equipoEstadio').value = eq.estadio || '';
     document.getElementById('modalEquipoTitulo').textContent = 'Editar Club';
     document.getElementById('formEquipo').classList.remove('was-validated');
     if (modalEquipoBS) modalEquipoBS.show();
@@ -708,8 +857,9 @@ async function manejarSubmitEquipo(e) {
   const id = document.getElementById('equipoId').value;
   const nombre = document.getElementById('equipoNombre').value.trim();
   const ciudad = document.getElementById('equipoCiudad').value.trim();
+  const estadio = document.getElementById('equipoEstadio').value.trim();
 
-  const payload = { nombre, ciudad };
+  const payload = { nombre, ciudad, estadio };
   const esEdicion = Boolean(id);
   const url = esEdicion ? API.equipos.actualizar(id) : API.equipos.crear();
   const metodo = esEdicion ? 'PUT' : 'POST';
@@ -772,8 +922,7 @@ function abrirModalNuevoEncuentro() {
   document.getElementById('encuentroHora').value = '15:30';
   document.getElementById('encuentroJornada').value = (encuentrosCache ? Math.floor(encuentrosCache.length / 2) + 1 : 1);
   document.getElementById('encuentroEstado').value = 'FINALIZADO';
-  document.getElementById('encuentroEstadio').value = '';
-  document.getElementById('encuentroArbitro').value = '';
+  document.getElementById('encuentroArbitro').value = 'Diego Haro';
 
   document.getElementById('amarillasLocal').value = 0;
   document.getElementById('rojasLocal').value = 0;
@@ -804,8 +953,7 @@ async function prepararEdicionEncuentro(id) {
     document.getElementById('encuentroHora').value = enc.hora || '15:30';
     document.getElementById('encuentroJornada').value = enc.jornada || 1;
     document.getElementById('encuentroEstado').value = enc.estado || 'FINALIZADO';
-    document.getElementById('encuentroEstadio').value = enc.estadio || '';
-    document.getElementById('encuentroArbitro').value = enc.arbitro || '';
+    document.getElementById('encuentroArbitro').value = enc.arbitro || 'Diego Haro';
 
     document.getElementById('amarillasLocal').value = enc.tarjetasAmarillasLocal ?? 0;
     document.getElementById('rojasLocal').value = enc.tarjetasRojasLocal ?? 0;
@@ -820,7 +968,7 @@ async function prepararEdicionEncuentro(id) {
     document.getElementById('alertaMismoEquipo').classList.add('hidden');
     document.getElementById('formEncuentro').classList.remove('was-validated');
 
-    poblarSelectsEquipos(equiposCache, enc.equipoLocal.id, enc.equipoVisitante.id);
+    poblarSelectsEquipos(equiposCache, enc.equipoLocal.id, enc.equipoVisitante.id, enc.estadio);
     if (modalEncuentroBS) modalEncuentroBS.show();
   } catch (error) {
     mostrarToast(`No se pudo obtener el partido: ${error.message}`, 'error');
@@ -857,6 +1005,16 @@ async function manejarSubmitEncuentro(e) {
     return;
   }
 
+  let estadioFinal = document.getElementById('encuentroEstadio').value;
+  if (estadioFinal === '__CUSTOM__') {
+    estadioFinal = document.getElementById('encuentroEstadioCustom').value.trim();
+    if (!estadioFinal) {
+      mostrarToast('Por favor ingresa el nombre del estadio de excepción.', 'warning');
+      document.getElementById('encuentroEstadioCustom')?.focus();
+      return;
+    }
+  }
+
   const id = document.getElementById('encuentroId').value;
   const payload = {
     equipoLocalId: Number(equipoLocalId),
@@ -867,7 +1025,7 @@ async function manejarSubmitEncuentro(e) {
     hora: document.getElementById('encuentroHora').value || '15:30',
     jornada: parseInt(document.getElementById('encuentroJornada').value, 10) || 1,
     estado: document.getElementById('encuentroEstado').value || 'FINALIZADO',
-    estadio: document.getElementById('encuentroEstadio').value.trim(),
+    estadio: estadioFinal,
     arbitro: document.getElementById('encuentroArbitro').value.trim(),
     tarjetasAmarillasLocal: parseInt(document.getElementById('amarillasLocal').value, 10) || 0,
     tarjetasAmarillasVisitante: parseInt(document.getElementById('amarillasVisitante').value, 10) || 0,
@@ -1340,7 +1498,7 @@ async function limpiarFiltroEncuentros() {
 }
 
 // =====================================================================
-// 10. EXPORTACIÓN (CSV / PDF)
+// 10. EXPORTACIÓN (CSV / PDF / EXCEL)
 // =====================================================================
 
 function exportarPosicionesCSV() {
@@ -1355,9 +1513,100 @@ function exportarPosicionesCSV() {
   mostrarToast('Archivo CSV descargado', 'success');
 }
 
+function exportarPosicionesExcel() {
+  mostrarToast('Generando reporte Excel...', 'info');
+  if (!tablaPosicionesCache || tablaPosicionesCache.length === 0) {
+    mostrarToast('No hay datos en la tabla para exportar.', 'warning');
+    return;
+  }
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Header">
+   <Font ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#0F172A" ss:Pattern="Solid"/>
+   <Alignment ss:Horizontal="Center"/>
+  </Style>
+  <Style ss:ID="Bold">
+   <Font ss:Bold="1"/>
+   <Alignment ss:Horizontal="Center"/>
+  </Style>
+  <Style ss:ID="Center">
+   <Alignment ss:Horizontal="Center"/>
+  </Style>
+  <Style ss:ID="Left">
+   <Alignment ss:Horizontal="Left"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Tabla de Posiciones">
+  <Table>
+   <Column ss:Width="40"/>
+   <Column ss:Width="160"/>
+   <Column ss:Width="100"/>
+   <Column ss:Width="40"/>
+   <Column ss:Width="40"/>
+   <Column ss:Width="40"/>
+   <Column ss:Width="40"/>
+   <Column ss:Width="40"/>
+   <Column ss:Width="40"/>
+   <Column ss:Width="40"/>
+   <Column ss:Width="50"/>
+   <Row ss:StyleID="Header">
+    <Cell><Data ss:Type="String">Pos</Data></Cell>
+    <Cell><Data ss:Type="String">Club</Data></Cell>
+    <Cell><Data ss:Type="String">Ciudad</Data></Cell>
+    <Cell><Data ss:Type="String">PJ</Data></Cell>
+    <Cell><Data ss:Type="String">PG</Data></Cell>
+    <Cell><Data ss:Type="String">PE</Data></Cell>
+    <Cell><Data ss:Type="String">PP</Data></Cell>
+    <Cell><Data ss:Type="String">GF</Data></Cell>
+    <Cell><Data ss:Type="String">GC</Data></Cell>
+    <Cell><Data ss:Type="String">DG</Data></Cell>
+    <Cell><Data ss:Type="String">PTS</Data></Cell>
+   </Row>`;
+
+  tablaPosicionesCache.forEach(item => {
+    xml += `
+   <Row>
+    <Cell ss:StyleID="Bold"><Data ss:Type="Number">${item.posicion}</Data></Cell>
+    <Cell ss:StyleID="Left"><Data ss:Type="String">${escapeHtml(item.equipoNombre)}</Data></Cell>
+    <Cell ss:StyleID="Left"><Data ss:Type="String">${escapeHtml(item.ciudad || '')}</Data></Cell>
+    <Cell ss:StyleID="Center"><Data ss:Type="Number">${item.partidosJugados}</Data></Cell>
+    <Cell ss:StyleID="Center"><Data ss:Type="Number">${item.partidosGanados}</Data></Cell>
+    <Cell ss:StyleID="Center"><Data ss:Type="Number">${item.partidosEmpatados}</Data></Cell>
+    <Cell ss:StyleID="Center"><Data ss:Type="Number">${item.partidosPerdidos}</Data></Cell>
+    <Cell ss:StyleID="Center"><Data ss:Type="Number">${item.golesAFavor}</Data></Cell>
+    <Cell ss:StyleID="Center"><Data ss:Type="Number">${item.golesEnContra}</Data></Cell>
+    <Cell ss:StyleID="Center"><Data ss:Type="Number">${item.diferenciaGoles}</Data></Cell>
+    <Cell ss:StyleID="Bold"><Data ss:Type="Number">${item.puntos}</Data></Cell>
+   </Row>`;
+  });
+
+  xml += `
+  </Table>
+ </Worksheet>
+</Workbook>`;
+
+  const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tabla_posiciones_${new Date().toISOString().slice(0, 10)}.xls`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast('Archivo Excel descargado', 'success');
+}
+
 function exportarPosicionesPDF() {
   if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
-    window.print();
+    mostrarToast('Librería PDF cargando, por favor intente en un momento.', 'warning');
     return;
   }
 

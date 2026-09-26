@@ -26,6 +26,7 @@ public class EquipoServiceImpl implements EquipoService {
     public EquipoDTO crearEquipo(EquipoDTO equipoDTO) {
         String nombreTrimmed = equipoDTO.getNombre().trim();
         String ciudadTrimmed = equipoDTO.getCiudad().trim();
+        String estadioTrimmed = equipoDTO.getEstadio() != null ? equipoDTO.getEstadio().trim() : null;
 
         if (equipoRepository.existsByNombreIgnoreCase(nombreTrimmed)) {
             throw new ReglaDeNegocioException("Ya existe un equipo registrado con el nombre: " + nombreTrimmed);
@@ -34,6 +35,7 @@ public class EquipoServiceImpl implements EquipoService {
         Equipo equipo = Equipo.builder()
                 .nombre(nombreTrimmed)
                 .ciudad(ciudadTrimmed)
+                .estadio(estadioTrimmed)
                 .build();
 
         Equipo guardado = equipoRepository.save(equipo);
@@ -63,6 +65,7 @@ public class EquipoServiceImpl implements EquipoService {
 
         String nuevoNombre = equipoDTO.getNombre().trim();
         String nuevaCiudad = equipoDTO.getCiudad().trim();
+        String nuevoEstadio = equipoDTO.getEstadio() != null ? equipoDTO.getEstadio().trim() : null;
 
         if (equipoRepository.existsByNombreIgnoreCaseAndIdNot(nuevoNombre, id)) {
             throw new ReglaDeNegocioException("Ya existe otro equipo registrado con el nombre: " + nuevoNombre);
@@ -70,6 +73,7 @@ public class EquipoServiceImpl implements EquipoService {
 
         equipo.setNombre(nuevoNombre);
         equipo.setCiudad(nuevaCiudad);
+        equipo.setEstadio(nuevoEstadio);
 
         Equipo actualizado = equipoRepository.save(equipo);
         return mapToDTO(actualizado);
@@ -101,6 +105,7 @@ public class EquipoServiceImpl implements EquipoService {
                 .id(equipo.getId())
                 .nombre(equipo.getNombre())
                 .ciudad(equipo.getCiudad())
+                .estadio(equipo.getEstadio())
                 .build();
     }
 }
