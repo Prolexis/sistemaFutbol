@@ -1605,13 +1605,15 @@ function exportarPosicionesExcel() {
 }
 
 function exportarPosicionesPDF() {
-  if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
-    mostrarToast('Librería PDF cargando, por favor intente en un momento.', 'warning');
+  const jsPDFClass = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (typeof window.jsPDF === 'function' ? window.jsPDF : null);
+
+  if (!jsPDFClass) {
+    mostrarToast('Librería PDF externa no disponible. Abriendo impresión nativa...', 'info');
+    setTimeout(() => { window.print(); }, 500);
     return;
   }
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const doc = new jsPDFClass({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
   doc.setFontSize(16);
   doc.setTextColor(15, 23, 42); // slate-900
