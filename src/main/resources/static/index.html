@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,21 +7,22 @@
   <meta name="description" content="Sistema oficial de gestión de campeonatos de fútbol, fixture, tabla de posiciones y estadísticas.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
 
-  <!-- 1. Bootstrap 5 CSS -->
+  <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  
+
   <!-- Bootstrap Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
-  <!-- Google Fonts: Inter & Plus Jakarta Sans (Tipografía moderna, editorial y deportiva) -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- 2. Tailwind CSS CDN -->
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: ['attribute', '[data-theme="dark"]'],
       theme: {
         extend: {
           fontFamily: {
@@ -37,6 +38,16 @@
               700: '#020617',
               accent: '#2563eb'
             }
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.25s ease-out',
+            'slide-up': 'slideUp 0.3s ease-out',
+            'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+          },
+          keyframes: {
+            fadeIn: { from: { opacity: '0' }, to: { opacity: '1' } },
+            slideUp: { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+            pulseSoft: { '0%,100%': { opacity: '1' }, '50%': { opacity: '.75' } },
           }
         }
       }
@@ -44,7 +55,11 @@
   </script>
 
   <style>
-    :root {
+    /* ====================================================
+       DESIGN TOKENS — LIGHT (default)
+    ==================================================== */
+    :root,
+    [data-theme="light"] {
       --bg-page: #f8fafc;
       --card-bg: #ffffff;
       --border-subtle: #e2e8f0;
@@ -52,8 +67,157 @@
       --text-muted: #64748b;
       --primary-navy: #0f172a;
       --accent-blue: #2563eb;
+
+      /* Header */
+      --header-bg: rgba(255,255,255,0.92);
+      --header-border: rgba(226,232,240,0.8);
+
+      /* Nav pills */
+      --pill-bg: #f1f5f9;
+      --pill-border: #e2e8f0;
+      --pill-active-bg: #ffffff;
+      --pill-active-shadow: 0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px -1px rgba(0,0,0,0.08);
+      --pill-link-color: #64748b;
+      --pill-link-hover: #0f172a;
+      --pill-active-color: #0f172a;
+
+      /* Table */
+      --table-th-bg: #f8fafc;
+      --table-th-color: #64748b;
+      --table-th-border: #e2e8f0;
+      --table-td-bg: #ffffff;
+      --table-td-color: #1e293b;
+      --table-td-border: #f1f5f9;
+      --table-hover-bg: #f8fafc;
+
+      /* Modals */
+      --modal-bg: #ffffff;
+      --modal-border: #e2e8f0;
+      --modal-header-bg: #ffffff;
+      --modal-footer-bg: #f8fafc;
+      --modal-footer-border: #f1f5f9;
+      --modal-header-border: #f1f5f9;
+      --modal-color: #0f172a;
+
+      /* Inputs */
+      --input-bg: #ffffff;
+      --input-border: #cbd5e1;
+      --input-color: #0f172a;
+      --input-focus-border: #0f172a;
+      --input-focus-shadow: 0 0 0 2px rgba(15,23,42,0.1);
+
+      /* Cards */
+      --card-hover-border: #cbd5e1;
+      --card-shadow: 0 1px 3px rgba(0,0,0,0.06);
+
+      /* Scrollbar */
+      --scrollbar-thumb: #cbd5e1;
+      --scrollbar-thumb-hover: #94a3b8;
+
+      /* Filter bar */
+      --filterbar-bg: #ffffff;
+      --filterbar-border: #e2e8f0;
+
+      /* Empty state */
+      --empty-bg: #ffffff;
+
+      /* Toast */
+      --toast-bg: #ffffff;
+      --toast-color: #1e293b;
+
+      /* Loading */
+      --loading-overlay: rgba(248,250,252,0.85);
+      --loading-spinner-border: #0f172a;
+
+      /* Badge / chip */
+      --badge-bg: #f1f5f9;
+      --badge-color: #475569;
+
+      /* Transition speed */
+      --transition: 0.2s ease;
     }
 
+    /* ====================================================
+       DARK MODE TOKENS
+    ==================================================== */
+    [data-theme="dark"] {
+      --bg-page: #0b0f1a;
+      --card-bg: #131929;
+      --border-subtle: #1e2a3b;
+      --text-main: #e2e8f0;
+      --text-muted: #64748b;
+      --primary-navy: #e2e8f0;
+      --accent-blue: #3b82f6;
+
+      /* Header */
+      --header-bg: rgba(11,15,26,0.92);
+      --header-border: rgba(30,42,59,0.8);
+
+      /* Nav pills */
+      --pill-bg: #0f172a;
+      --pill-border: #1e2a3b;
+      --pill-active-bg: #1e293b;
+      --pill-active-shadow: 0 1px 4px 0 rgba(0,0,0,0.4);
+      --pill-link-color: #64748b;
+      --pill-link-hover: #e2e8f0;
+      --pill-active-color: #f1f5f9;
+
+      /* Table */
+      --table-th-bg: #0f172a;
+      --table-th-color: #64748b;
+      --table-th-border: #1e2a3b;
+      --table-td-bg: #131929;
+      --table-td-color: #cbd5e1;
+      --table-td-border: #1e2a3b;
+      --table-hover-bg: #1a2438;
+
+      /* Modals */
+      --modal-bg: #131929;
+      --modal-border: #1e2a3b;
+      --modal-header-bg: #0f172a;
+      --modal-footer-bg: #0b0f1a;
+      --modal-footer-border: #1e2a3b;
+      --modal-header-border: #1e2a3b;
+      --modal-color: #e2e8f0;
+
+      /* Inputs */
+      --input-bg: #0f172a;
+      --input-border: #1e2a3b;
+      --input-color: #e2e8f0;
+      --input-focus-border: #3b82f6;
+      --input-focus-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+
+      /* Cards */
+      --card-hover-border: #334155;
+      --card-shadow: 0 1px 4px rgba(0,0,0,0.4);
+
+      /* Scrollbar */
+      --scrollbar-thumb: #1e2a3b;
+      --scrollbar-thumb-hover: #334155;
+
+      /* Filter bar */
+      --filterbar-bg: #0f172a;
+      --filterbar-border: #1e2a3b;
+
+      /* Empty state */
+      --empty-bg: #131929;
+
+      /* Toast */
+      --toast-bg: #1e293b;
+      --toast-color: #e2e8f0;
+
+      /* Loading */
+      --loading-overlay: rgba(11,15,26,0.85);
+      --loading-spinner-border: #3b82f6;
+
+      /* Badge / chip */
+      --badge-bg: #1e293b;
+      --badge-color: #94a3b8;
+    }
+
+    /* ====================================================
+       BASE STYLES
+    ==================================================== */
     body {
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background-color: var(--bg-page);
@@ -61,38 +225,56 @@
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      transition: background-color var(--transition), color var(--transition);
     }
 
-    .tabular-nums {
-      font-variant-numeric: tabular-nums;
-    }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
 
-    /* Scrollbars discretos y minimalistas */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
+    /* ====================================================
+       SCROLLBAR
+    ==================================================== */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
+      background: var(--scrollbar-thumb);
       border-radius: 9999px;
+      transition: background var(--transition);
     }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
+    ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+
+    /* ====================================================
+       HEADER — Glass morphism + dynamic border
+    ==================================================== */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--header-border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
+    }
+    .site-header.scrolled {
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    [data-theme="dark"] .site-header.scrolled {
+      box-shadow: 0 2px 20px rgba(0,0,0,0.5);
     }
 
-    /* Navegación Segmented Tabs Limpia (estilo Apple / Linear) */
+    /* ====================================================
+       NAV PILLS (Segmented Control)
+    ==================================================== */
     .nav-pills {
-      background-color: #f1f5f9;
-      border: 1px solid #e2e8f0;
+      background-color: var(--pill-bg);
+      border: 1px solid var(--pill-border);
       padding: 0.25rem;
       border-radius: 0.75rem;
       display: inline-flex;
+      transition: background-color var(--transition), border-color var(--transition);
     }
     .nav-pills .nav-link {
-      color: #64748b;
+      color: var(--pill-link-color);
       border-radius: 0.5rem;
       font-weight: 600;
       padding: 0.45rem 1rem;
@@ -100,50 +282,92 @@
       transition: all 0.15s ease-in-out;
       border: none;
     }
-    .nav-pills .nav-link:hover {
-      color: #0f172a;
-    }
+    .nav-pills .nav-link:hover { color: var(--pill-link-hover); }
     .nav-pills .nav-link.active {
-      color: #0f172a !important;
-      background-color: #ffffff !important;
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
+      color: var(--pill-active-color) !important;
+      background-color: var(--pill-active-bg) !important;
+      box-shadow: var(--pill-active-shadow);
     }
 
-    /* Tabla de Posiciones estilo UEFA / Premier League Limpio */
+    /* ====================================================
+       DARK MODE TOGGLE BUTTON
+    ==================================================== */
+    .btn-theme-toggle {
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 0.5rem;
+      background: var(--pill-bg);
+      border: 1px solid var(--pill-border);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .btn-theme-toggle:hover {
+      background: var(--card-bg);
+      color: var(--text-main);
+      transform: rotate(15deg);
+    }
+
+    /* ====================================================
+       CARDS — Dynamic hover + entrance animation
+    ==================================================== */
+    .app-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.75rem;
+      box-shadow: var(--card-shadow);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease, background-color var(--transition);
+      animation: slideUp 0.3s ease-out;
+    }
+    .app-card:hover {
+      border-color: var(--card-hover-border);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      transform: translateY(-1px);
+    }
+    [data-theme="dark"] .app-card:hover {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    /* ====================================================
+       SCOREBOARD TABLE
+    ==================================================== */
     .scoreboard-table th {
-      background-color: #f8fafc !important;
-      color: #64748b !important;
+      background-color: var(--table-th-bg) !important;
+      color: var(--table-th-color) !important;
       font-weight: 600;
       text-transform: uppercase;
       font-size: 0.72rem;
       letter-spacing: 0.05em;
-      border-bottom: 1px solid #e2e8f0 !important;
+      border-bottom: 1px solid var(--table-th-border) !important;
       padding: 0.85rem 0.75rem;
+      transition: background-color var(--transition), color var(--transition);
     }
     .scoreboard-table td {
-      background-color: #ffffff !important;
-      color: #1e293b !important;
-      border-bottom: 1px solid #f1f5f9;
+      background-color: var(--table-td-bg) !important;
+      color: var(--table-td-color) !important;
+      border-bottom: 1px solid var(--table-td-border);
       vertical-align: middle;
       padding: 0.85rem 0.75rem;
       font-size: 0.875rem;
+      transition: background-color 0.15s ease, color var(--transition);
     }
     .scoreboard-table tr:hover td {
-      background-color: #f8fafc !important;
+      background-color: var(--table-hover-bg) !important;
     }
 
-    /* Podio sutil en tabla */
-    .row-oro {
-      border-left: 3px solid #f59e0b !important;
-    }
-    .row-plata {
-      border-left: 3px solid #94a3b8 !important;
-    }
-    .row-bronce {
-      border-left: 3px solid #d97706 !important;
-    }
+    /* Podio */
+    .row-oro  { border-left: 3px solid #f59e0b !important; }
+    .row-plata { border-left: 3px solid #94a3b8 !important; }
+    .row-bronce { border-left: 3px solid #d97706 !important; }
 
-    /* Form Guide (Rachas) círculos pulcros */
+    /* ====================================================
+       FORM GUIDE DOTS
+    ==================================================== */
     .form-dot {
       display: inline-flex;
       align-items: center;
@@ -154,57 +378,348 @@
       font-size: 0.68rem;
       font-weight: 700;
       line-height: 1;
+      transition: transform 0.15s ease;
     }
-    .form-dot-g {
-      background-color: #10b981;
-      color: #ffffff;
-    }
-    .form-dot-e {
-      background-color: #94a3b8;
-      color: #ffffff;
-    }
-    .form-dot-p {
-      background-color: #ef4444;
-      color: #ffffff;
-    }
+    .form-dot:hover { transform: scale(1.2); }
+    .form-dot-g { background-color: #10b981; color: #ffffff; }
+    .form-dot-e { background-color: #94a3b8; color: #ffffff; }
+    .form-dot-p { background-color: #ef4444; color: #ffffff; }
 
-    /* Modales Limpios */
+    /* ====================================================
+       MODALS — Dynamic dark support
+    ==================================================== */
     .modal-content {
-      background-color: #ffffff !important;
-      border: 1px solid #e2e8f0 !important;
+      background-color: var(--modal-bg) !important;
+      border: 1px solid var(--modal-border) !important;
       border-radius: 1rem !important;
-      color: #0f172a !important;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+      color: var(--modal-color) !important;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.12) !important;
+      animation: slideUp 0.25s ease-out;
+      transition: background-color var(--transition), border-color var(--transition);
+    }
+    [data-theme="dark"] .modal-content {
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6) !important;
     }
     .modal-header {
-      border-bottom: 1px solid #f1f5f9 !important;
-      background-color: #ffffff !important;
+      border-bottom: 1px solid var(--modal-header-border) !important;
+      background-color: var(--modal-header-bg) !important;
       padding: 1.25rem 1.5rem !important;
+      transition: background-color var(--transition);
     }
     .modal-footer {
-      border-top: 1px solid #f1f5f9 !important;
-      background-color: #f8fafc !important;
+      border-top: 1px solid var(--modal-footer-border) !important;
+      background-color: var(--modal-footer-bg) !important;
       border-bottom-left-radius: 1rem;
       border-bottom-right-radius: 1rem;
       padding: 1rem 1.5rem !important;
+      transition: background-color var(--transition);
     }
+    .modal-title {
+      color: var(--text-main) !important;
+    }
+    .btn-close {
+      filter: none;
+    }
+    [data-theme="dark"] .btn-close {
+      filter: invert(1) grayscale(1);
+    }
+
+    /* ====================================================
+       INPUTS / SELECTS
+    ==================================================== */
     .form-control, .form-select {
-      background-color: #ffffff !important;
-      border: 1px solid #cbd5e1 !important;
-      color: #0f172a !important;
+      background-color: var(--input-bg) !important;
+      border: 1px solid var(--input-border) !important;
+      color: var(--input-color) !important;
       border-radius: 0.65rem !important;
       padding: 0.6rem 0.85rem !important;
       font-size: 0.875rem;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s, background-color var(--transition), color var(--transition);
     }
     .form-control:focus, .form-select:focus {
-      background-color: #ffffff !important;
-      border-color: #0f172a !important;
-      box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1) !important;
-      color: #0f172a !important;
+      background-color: var(--input-bg) !important;
+      border-color: var(--input-focus-border) !important;
+      box-shadow: var(--input-focus-shadow) !important;
+      color: var(--input-color) !important;
+    }
+    .form-control::placeholder {
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+    [data-theme="dark"] option {
+      background-color: #1e293b;
+      color: #e2e8f0;
     }
 
-    /* Estilos de Impresión */
+    /* ====================================================
+       BUTTONS — Dynamic hover micro-interactions
+    ==================================================== */
+    .btn-action-primary {
+      background-color: var(--text-main);
+      color: var(--bg-page);
+      border: 1px solid transparent;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      font-size: 0.8rem;
+      padding: 0.45rem 1rem;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      cursor: pointer;
+    }
+    .btn-action-primary:hover {
+      opacity: 0.85;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .btn-action-ghost {
+      background-color: var(--card-bg);
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.5rem;
+      font-weight: 500;
+      font-size: 0.8rem;
+      padding: 0.45rem 0.875rem;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      cursor: pointer;
+    }
+    .btn-action-ghost:hover {
+      background-color: var(--pill-bg);
+      color: var(--text-main);
+      border-color: var(--card-hover-border);
+    }
+
+    /* ====================================================
+       FILTER BAR
+    ==================================================== */
+    .filter-bar {
+      background: var(--filterbar-bg);
+      border: 1px solid var(--filterbar-border);
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      transition: background-color var(--transition), border-color var(--transition);
+    }
+    .filter-bar select, .filter-bar input[type="date"] {
+      background: var(--input-bg) !important;
+      border: 1px solid var(--input-border) !important;
+      color: var(--input-color) !important;
+      border-radius: 0.5rem;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      transition: border-color 0.15s, background-color var(--transition);
+      width: 100%;
+    }
+    .filter-bar select:focus, .filter-bar input[type="date"]:focus {
+      outline: none;
+      border-color: var(--input-focus-border) !important;
+    }
+
+    /* ====================================================
+       LOADING INDICATOR
+    ==================================================== */
+    #loadingIndicator {
+      background: var(--loading-overlay);
+    }
+    #loadingIndicator .spinner-border-ring {
+      border-color: var(--loading-spinner-border);
+      border-top-color: transparent;
+    }
+    #loadingIndicator .loading-label {
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* ====================================================
+       EMPTY STATE CONTAINERS
+    ==================================================== */
+    .empty-state {
+      background: var(--empty-bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.75rem;
+      transition: background-color var(--transition), border-color var(--transition);
+    }
+
+    /* ====================================================
+       SECTION HEADERS — animated underline on h2
+    ==================================================== */
+    .section-title {
+      position: relative;
+      display: inline-block;
+      color: var(--text-main);
+      transition: color var(--transition);
+    }
+
+    /* ====================================================
+       STAT CARDS — subtle left accent + glow on hover
+    ==================================================== */
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      transition: all 0.2s ease, background-color var(--transition), border-color var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: transparent;
+      transition: background 0.2s ease;
+    }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-card:hover::before { background: var(--accent-blue); }
+    [data-theme="dark"] .stat-card:hover {
+      box-shadow: 0 0 20px rgba(59,130,246,0.08);
+      border-color: #1e3a5f;
+    }
+
+    /* ====================================================
+       INLINE BADGES
+    ==================================================== */
+    .badge-chip {
+      background: var(--badge-bg);
+      color: var(--badge-color);
+      border: 1px solid var(--border-subtle);
+      border-radius: 9999px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      transition: background-color var(--transition), color var(--transition), border-color var(--transition);
+    }
+
+    /* ====================================================
+       POINTS BADGE
+    ==================================================== */
+    .pts-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.2rem 0.65rem;
+      border-radius: 0.35rem;
+      background: var(--badge-bg);
+      color: var(--text-main);
+      font-weight: 700;
+      font-size: 0.875rem;
+      transition: background-color var(--transition), color var(--transition);
+    }
+
+    /* Team avatar initials */
+    .team-avatar {
+      background: var(--badge-bg);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+    }
+
+    /* Inline label inputs in dark mode */
+    .label-text {
+      color: var(--text-muted);
+      transition: color var(--transition);
+    }
+
+    /* ====================================================
+       TOAST — Dynamic
+    ==================================================== */
+    .toast {
+      background: var(--toast-bg) !important;
+      color: var(--toast-color) !important;
+      border-color: var(--border-subtle) !important;
+      transition: background-color var(--transition), color var(--transition), border-color var(--transition);
+    }
+    .toast-body { color: var(--toast-color) !important; }
+
+    /* ====================================================
+       WHATSAPP FLOATING BUTTON
+    ==================================================== */
+    .wsp-fab {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 50;
+      width: 3.25rem;
+      height: 3.25rem;
+      border-radius: 9999px;
+      background: #25D366;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      box-shadow: 0 4px 16px rgba(37,211,102,0.45);
+      cursor: pointer;
+      border: none;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      text-decoration: none;
+    }
+    .wsp-fab:hover {
+      transform: scale(1.12) rotate(-5deg);
+      box-shadow: 0 8px 28px rgba(37,211,102,0.55);
+      color: #ffffff;
+    }
+    .wsp-fab:active { transform: scale(0.96); }
+    .wsp-fab::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 9999px;
+      border: 2px solid rgba(37,211,102,0.3);
+      animation: pulseSoft 2.5s ease-in-out infinite;
+    }
+    @keyframes pulseSoft {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.15); }
+    }
+
+    /* ====================================================
+       ANIMATIONS — Card entrance & stagger
+    ==================================================== */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+    .animate-slide-up { animation: slideUp 0.3s ease-out; }
+
+    /* Stagger for grid items */
+    .grid-stagger > *:nth-child(1) { animation-delay: 0ms; }
+    .grid-stagger > *:nth-child(2) { animation-delay: 50ms; }
+    .grid-stagger > *:nth-child(3) { animation-delay: 100ms; }
+    .grid-stagger > *:nth-child(4) { animation-delay: 150ms; }
+    .grid-stagger > *:nth-child(n+5) { animation-delay: 200ms; }
+
+    /* ====================================================
+       ACCORDION-LIKE match card  scored marker
+    ==================================================== */
+    .score-pill {
+      background: var(--badge-bg);
+      color: var(--text-main);
+      border-radius: 0.4rem;
+      padding: 0.2rem 0.65rem;
+      font-weight: 700;
+      font-size: 0.875rem;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.05em;
+      transition: background-color var(--transition), color var(--transition);
+    }
+
+    /* ====================================================
+       PRINT STYLES
+    ==================================================== */
     @media print {
       body { background: white !important; color: black !important; }
       header, nav, footer, .toast-container,
@@ -213,7 +728,7 @@
       #btnAbrirModalEquipo, #btnAbrirModalEncuentro,
       #filtrosEncuentrosBar, #busquedaEquiposBar,
       #btnRefrescarDashboard, .modal, .modal-backdrop,
-      .tab-pane:not(#tab-tabla) { display: none !important; }
+      .tab-pane:not(#tab-tabla), .wsp-fab, .btn-theme-toggle { display: none !important; }
 
       #tab-tabla { display: block !important; opacity: 1 !important; }
       .scoreboard-table { color: black !important; border-collapse: collapse; width: 100% !important; }
@@ -230,47 +745,56 @@
     }
   </style>
 </head>
-<body class="selection:bg-slate-900 selection:text-white">
+<body>
 
-  <!-- Header / Navbar Principal Minimalista & Profesional -->
-  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+  <!-- ================================================================
+       HEADER / NAVBAR
+  ================================================================ -->
+  <header class="site-header" id="siteHeader">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
-        
+
         <!-- Logo & Branding -->
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-base shadow-xs">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-base shadow-sm"
+               style="background: var(--text-main); color: var(--bg-page);">
             <i class="bi bi-shield-shaded"></i>
           </div>
           <div class="flex items-baseline gap-2">
-            <span class="text-base sm:text-lg font-bold tracking-tight text-slate-900">Liga Fútbol</span>
-            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-wide">Torneo 2026</span>
+            <span class="text-base sm:text-lg font-bold tracking-tight" style="color: var(--text-main);">
+              Liga Fútbol
+            </span>
+            <span class="badge-chip hidden sm:inline-flex">Torneo 2026</span>
           </div>
         </div>
 
-        <!-- Navigation Tabs (Segmented Control) -->
+        <!-- Navigation Tabs (desktop) -->
         <nav class="hidden sm:block">
           <ul class="nav nav-pills" id="mainTabs" role="tablist">
             <li class="nav-item" role="presentation">
-              <button class="nav-link active flex items-center gap-2" id="tab-tabla-btn" data-bs-toggle="pill" data-bs-target="#tab-tabla" type="button" role="tab">
+              <button class="nav-link active flex items-center gap-2" id="tab-tabla-btn"
+                      data-bs-toggle="pill" data-bs-target="#tab-tabla" type="button" role="tab">
                 <i class="bi bi-list-ol"></i>
                 <span>Posiciones</span>
               </button>
             </li>
             <li class="nav-item" role="presentation">
-              <button class="nav-link flex items-center gap-2" id="tab-encuentros-btn" data-bs-toggle="pill" data-bs-target="#tab-encuentros" type="button" role="tab">
+              <button class="nav-link flex items-center gap-2" id="tab-encuentros-btn"
+                      data-bs-toggle="pill" data-bs-target="#tab-encuentros" type="button" role="tab">
                 <i class="bi bi-calendar3"></i>
                 <span>Encuentros</span>
               </button>
             </li>
             <li class="nav-item" role="presentation">
-              <button class="nav-link flex items-center gap-2" id="tab-equipos-btn" data-bs-toggle="pill" data-bs-target="#tab-equipos" type="button" role="tab">
+              <button class="nav-link flex items-center gap-2" id="tab-equipos-btn"
+                      data-bs-toggle="pill" data-bs-target="#tab-equipos" type="button" role="tab">
                 <i class="bi bi-people"></i>
                 <span>Equipos</span>
               </button>
             </li>
             <li class="nav-item" role="presentation">
-              <button class="nav-link flex items-center gap-2" id="tab-dashboard-btn" data-bs-toggle="pill" data-bs-target="#tab-dashboard" type="button" role="tab">
+              <button class="nav-link flex items-center gap-2" id="tab-dashboard-btn"
+                      data-bs-toggle="pill" data-bs-target="#tab-dashboard" type="button" role="tab">
                 <i class="bi bi-bar-chart-line"></i>
                 <span>Estadísticas</span>
               </button>
@@ -278,73 +802,109 @@
           </ul>
         </nav>
 
-        <!-- Quick Refresh Button -->
+        <!-- Actions: Refresh + Dark mode toggle -->
         <div class="flex items-center gap-2">
-          <button id="btnRefrescarTodo" class="p-2 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors shadow-xs text-xs font-medium flex items-center gap-1.5" title="Sincronizar datos">
+          <button id="btnRefrescarTodo"
+                  class="btn-action-ghost text-xs hidden sm:flex"
+                  title="Sincronizar datos">
             <i class="bi bi-arrow-repeat text-sm"></i>
             <span class="hidden md:inline">Actualizar</span>
+          </button>
+
+          <!-- Dark Mode Toggle -->
+          <button class="btn-theme-toggle" id="btnToggleDarkMode" title="Cambiar tema" aria-label="Toggle dark mode">
+            <i class="bi bi-moon-stars-fill" id="iconDarkMode"></i>
           </button>
         </div>
 
       </div>
 
-      <!-- Mobile Navigation Tabs (visible only on small screens) -->
+      <!-- Mobile Navigation Tabs -->
       <div class="sm:hidden pb-3">
-        <ul class="nav nav-pills w-full flex justify-between" id="mainTabsMobile" role="tablist">
+        <ul class="nav nav-pills w-full flex" id="mainTabsMobile" role="tablist">
           <li class="nav-item flex-1 text-center" role="presentation">
-            <button class="nav-link w-full active text-xs py-1.5 px-1" data-bs-toggle="pill" data-bs-target="#tab-tabla" type="button">Posiciones</button>
+            <button class="nav-link w-full active text-xs py-1.5 px-1"
+                    data-bs-toggle="pill" data-bs-target="#tab-tabla" type="button">
+              <i class="bi bi-list-ol block text-sm mb-0.5"></i>Posiciones
+            </button>
           </li>
           <li class="nav-item flex-1 text-center" role="presentation">
-            <button class="nav-link w-full text-xs py-1.5 px-1" data-bs-toggle="pill" data-bs-target="#tab-encuentros" type="button">Partidos</button>
+            <button class="nav-link w-full text-xs py-1.5 px-1"
+                    data-bs-toggle="pill" data-bs-target="#tab-encuentros" type="button">
+              <i class="bi bi-calendar3 block text-sm mb-0.5"></i>Partidos
+            </button>
           </li>
           <li class="nav-item flex-1 text-center" role="presentation">
-            <button class="nav-link w-full text-xs py-1.5 px-1" data-bs-toggle="pill" data-bs-target="#tab-equipos" type="button">Equipos</button>
+            <button class="nav-link w-full text-xs py-1.5 px-1"
+                    data-bs-toggle="pill" data-bs-target="#tab-equipos" type="button">
+              <i class="bi bi-people block text-sm mb-0.5"></i>Equipos
+            </button>
           </li>
           <li class="nav-item flex-1 text-center" role="presentation">
-            <button class="nav-link w-full text-xs py-1.5 px-1" data-bs-toggle="pill" data-bs-target="#tab-dashboard" type="button">Stats</button>
+            <button class="nav-link w-full text-xs py-1.5 px-1"
+                    data-bs-toggle="pill" data-bs-target="#tab-dashboard" type="button">
+              <i class="bi bi-bar-chart-line block text-sm mb-0.5"></i>Stats
+            </button>
           </li>
         </ul>
+        <!-- Mobile: Refresh button below tabs -->
+        <div class="mt-2 flex gap-2 px-1">
+          <button id="btnRefrescarTodoMobile"
+                  class="btn-action-ghost text-xs flex-1 justify-center py-1.5">
+            <i class="bi bi-arrow-repeat text-sm"></i>
+            <span>Actualizar</span>
+          </button>
+        </div>
       </div>
     </div>
   </header>
 
   <!-- Global Loading Indicator -->
-  <div id="loadingIndicator" class="fixed inset-0 bg-slate-900/10 backdrop-blur-xs z-50 flex flex-col items-center justify-center gap-2 transition-opacity duration-150 opacity-0 pointer-events-none">
-    <div class="w-8 h-8 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
-    <span class="text-xs font-semibold text-slate-700 bg-white px-3 py-1 rounded-md border border-slate-200 shadow-xs">Cargando...</span>
+  <div id="loadingIndicator"
+       class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-2 transition-opacity duration-150 opacity-0 pointer-events-none"
+       style="background: var(--loading-overlay); backdrop-filter: blur(2px);">
+    <div class="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin spinner-border-ring"
+         style="border-color: var(--loading-spinner-border); border-top-color: transparent;"></div>
+    <span class="text-xs font-semibold px-3 py-1 rounded-md shadow-sm loading-label"
+          style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-subtle);">
+      Cargando...
+    </span>
   </div>
 
-  <!-- Main Container -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- ================================================================
+       MAIN CONTENT
+  ================================================================ -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
     <div class="tab-content" id="mainTabsContent">
 
-      <!-- =================================================================== -->
-      <!-- TAB 1: TABLA DE POSICIONES -->
-      <!-- =================================================================== -->
-      <section class="tab-pane fade show active" id="tab-tabla" role="tabpanel" aria-labelledby="tab-tabla-btn">
-        
-        <!-- Header de la sección -->
+      <!-- ============================================================
+           TAB 1: TABLA DE POSICIONES
+      ============================================================ -->
+      <section class="tab-pane fade show active animate-fade-in" id="tab-tabla" role="tabpanel" aria-labelledby="tab-tabla-btn">
+
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Tabla de Posiciones</h2>
-            <p class="text-xs sm:text-sm text-slate-500 m-0">Victoria: 3 pts &bull; Empate: 1 pto &bull; Derrota: 0 pts</p>
+            <h2 class="section-title text-xl sm:text-2xl font-bold tracking-tight mb-0">Tabla de Posiciones</h2>
+            <p class="text-xs sm:text-sm mt-1 mb-0" style="color: var(--text-muted);">
+              Victoria: 3 pts &bull; Empate: 1 pto &bull; Derrota: 0 pts
+            </p>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <!-- Botón Exportar CSV -->
-            <button id="btnExportarPosicionesCSV" class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors">
-              <i class="bi bi-filetype-csv text-sm text-emerald-600"></i>
-              <span>Exportar CSV</span>
+            <button id="btnExportarPosicionesCSV"
+                    class="btn-action-ghost text-xs">
+              <i class="bi bi-filetype-csv text-sm" style="color: #10b981;"></i>
+              <span>CSV</span>
             </button>
-            <!-- Botón Exportar PDF -->
-            <button id="btnExportarPosicionesPDF" class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors">
-              <i class="bi bi-file-earmark-pdf text-sm text-rose-500"></i>
-              <span>Exportar PDF</span>
+            <button id="btnExportarPosicionesPDF"
+                    class="btn-action-ghost text-xs">
+              <i class="bi bi-file-earmark-pdf text-sm" style="color: #ef4444;"></i>
+              <span>PDF</span>
             </button>
           </div>
         </div>
 
-        <!-- Tabla Scoreboard Container -->
-        <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden mb-6">
+        <!-- Table Container -->
+        <div class="app-card overflow-hidden mb-6">
           <div class="table-responsive">
             <table class="table scoreboard-table mb-0 w-full text-sm">
               <thead>
@@ -359,18 +919,18 @@
                   <th class="text-center w-12 hidden md:table-cell" title="Goles a Favor">GF</th>
                   <th class="text-center w-12 hidden md:table-cell" title="Goles en Contra">GC</th>
                   <th class="text-center w-12 font-bold" title="Diferencia de Goles">DG</th>
-                  <th class="text-center font-bold w-16 text-slate-900">PTS</th>
+                  <th class="text-center font-bold w-16">PTS</th>
                 </tr>
               </thead>
               <tbody id="tablaPosicionesBody">
-                <!-- Se llena dinámicamente vía app.js -->
+                <!-- Dynamic content -->
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Leyenda Informativa Sutil -->
-        <div class="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
+        <!-- Legend -->
+        <div class="flex items-center gap-4 text-xs flex-wrap" style="color: var(--text-muted);">
           <span class="flex items-center gap-1.5">
             <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 1° Campeón
           </span>
@@ -380,200 +940,194 @@
           <span class="flex items-center gap-1.5">
             <span class="w-2.5 h-2.5 rounded-full bg-orange-600"></span> 3° Tercer Puesto
           </span>
-          <span class="text-slate-400 ms-auto">Criterio: Puntos &rarr; Diferencia de Goles &rarr; Goles a Favor</span>
+          <span class="ms-auto" style="color: var(--text-muted);">
+            Criterio: Puntos &rarr; DG &rarr; GF
+          </span>
         </div>
 
       </section>
 
-      <!-- =================================================================== -->
-      <!-- TAB 2: ENCUENTROS -->
-      <!-- =================================================================== -->
-      <section class="tab-pane fade" id="tab-encuentros" role="tabpanel" aria-labelledby="tab-encuentros-btn">
-        
-        <!-- Header de la sección -->
+      <!-- ============================================================
+           TAB 2: ENCUENTROS
+      ============================================================ -->
+      <section class="tab-pane fade animate-fade-in" id="tab-encuentros" role="tabpanel" aria-labelledby="tab-encuentros-btn">
+
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Encuentros Disputados</h2>
-            <p class="text-xs sm:text-sm text-slate-500 m-0">Calendario oficial y resultados de la temporada</p>
+            <h2 class="section-title text-xl sm:text-2xl font-bold tracking-tight mb-0">Encuentros Disputados</h2>
+            <p class="text-xs sm:text-sm mt-1 mb-0" style="color: var(--text-muted);">
+              Calendario oficial y resultados de la temporada
+            </p>
           </div>
-          <div>
-            <button id="btnAbrirModalEncuentro" class="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm shadow-xs flex items-center gap-2 transition-colors">
-              <i class="bi bi-plus-lg"></i>
-              <span>Registrar Partido</span>
-            </button>
-          </div>
+          <button id="btnAbrirModalEncuentro" class="btn-action-primary text-xs sm:text-sm">
+            <i class="bi bi-plus-lg"></i>
+            <span>Registrar Partido</span>
+          </button>
         </div>
 
-        <!-- Barra de filtros limpia -->
-        <div id="filtrosEncuentrosBar" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6 p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-          <div class="flex-1 min-w-[200px]">
-            <select id="filtroEquipoEncuentro" class="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 text-xs sm:text-sm focus:outline-none focus:border-slate-900">
+        <!-- Filter bar -->
+        <div id="filtrosEncuentrosBar" class="filter-bar flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6">
+          <div class="flex-1 min-w-[180px]">
+            <select id="filtroEquipoEncuentro">
               <option value="">Todos los clubes</option>
             </select>
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-500 font-medium">Desde:</span>
-            <input type="date" id="filtroFechaInicio" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-slate-900">
+            <span class="text-xs font-medium whitespace-nowrap" style="color: var(--text-muted);">Desde:</span>
+            <input type="date" id="filtroFechaInicio">
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-500 font-medium">Hasta:</span>
-            <input type="date" id="filtroFechaFin" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-slate-900">
+            <span class="text-xs font-medium whitespace-nowrap" style="color: var(--text-muted);">Hasta:</span>
+            <input type="date" id="filtroFechaFin">
           </div>
-          <div class="flex items-center gap-2">
-            <button id="btnFiltrarEncuentrosFecha" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button id="btnFiltrarEncuentrosFecha" class="btn-action-primary text-xs">
               <i class="bi bi-funnel"></i> Filtrar
             </button>
-            <button id="btnLimpiarFiltroEncuentros" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-medium transition-colors">
+            <button id="btnLimpiarFiltroEncuentros" class="btn-action-ghost text-xs">
               Limpiar
             </button>
           </div>
         </div>
 
-        <!-- Grid de Encuentros -->
-        <div id="listaEncuentrosContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          <!-- Se llena dinámicamente vía app.js -->
+        <!-- Encounters grid -->
+        <div id="listaEncuentrosContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 grid-stagger">
+          <!-- Dynamic content -->
         </div>
 
-        <!-- Estado vacío si no hay encuentros -->
-        <div id="sinEncuentrosMsg" class="hidden text-center py-16 bg-white rounded-xl border border-slate-200 shadow-xs">
-          <i class="bi bi-calendar-x text-4xl text-slate-300 mb-2 block"></i>
-          <h4 class="text-base font-bold text-slate-800 mb-1">No hay partidos registrados</h4>
-          <p class="text-xs text-slate-500 mb-4">Comienza registrando los encuentros del campeonato.</p>
-          <button class="btnRegistrarPrimerEncuentro px-3.5 py-2 rounded-lg bg-slate-900 text-white text-xs font-semibold">
+        <!-- Empty state -->
+        <div id="sinEncuentrosMsg" class="hidden text-center py-16 empty-state">
+          <i class="bi bi-calendar-x text-4xl mb-2 block" style="color: var(--text-muted); opacity: 0.4;"></i>
+          <h4 class="text-base font-bold mb-1" style="color: var(--text-main);">No hay partidos registrados</h4>
+          <p class="text-xs mb-4" style="color: var(--text-muted);">Comienza registrando los encuentros del campeonato.</p>
+          <button class="btnRegistrarPrimerEncuentro btn-action-primary text-xs mx-auto">
             + Registrar Partido
           </button>
         </div>
 
       </section>
 
-      <!-- =================================================================== -->
-      <!-- TAB 3: EQUIPOS -->
-      <!-- =================================================================== -->
-      <section class="tab-pane fade" id="tab-equipos" role="tabpanel" aria-labelledby="tab-equipos-btn">
-        
-        <!-- Header de la sección -->
+      <!-- ============================================================
+           TAB 3: EQUIPOS
+      ============================================================ -->
+      <section class="tab-pane fade animate-fade-in" id="tab-equipos" role="tabpanel" aria-labelledby="tab-equipos-btn">
+
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Directorio de Clubes</h2>
-            <p class="text-xs sm:text-sm text-slate-500 m-0">Equipos inscritos y sedes de la competición</p>
+            <h2 class="section-title text-xl sm:text-2xl font-bold tracking-tight mb-0">Directorio de Clubes</h2>
+            <p class="text-xs sm:text-sm mt-1 mb-0" style="color: var(--text-muted);">
+              Equipos inscritos y sedes de la competición
+            </p>
           </div>
-          <div>
-            <button id="btnAbrirModalEquipo" class="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm shadow-xs flex items-center gap-2 transition-colors">
-              <i class="bi bi-plus-lg"></i>
-              <span>Nuevo Club</span>
-            </button>
-          </div>
+          <button id="btnAbrirModalEquipo" class="btn-action-primary text-xs sm:text-sm">
+            <i class="bi bi-plus-lg"></i>
+            <span>Nuevo Club</span>
+          </button>
         </div>
 
-        <!-- Barra de búsqueda limpia -->
+        <!-- Search bar -->
         <div id="busquedaEquiposBar" class="mb-6">
           <div class="relative max-w-sm">
-            <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
-            <input type="text" id="inputBuscarEquipo" placeholder="Buscar por nombre o ciudad..." class="w-full pl-9 pr-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-900 text-xs sm:text-sm placeholder-slate-400 focus:outline-none focus:border-slate-900 shadow-xs transition-colors">
+            <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style="color: var(--text-muted);"></i>
+            <input type="text" id="inputBuscarEquipo"
+                   placeholder="Buscar por nombre o ciudad..."
+                   class="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-lg shadow-sm"
+                   style="background: var(--card-bg); border: 1px solid var(--border-subtle); color: var(--text-main); outline: none; transition: border-color 0.15s, background-color var(--transition);">
           </div>
         </div>
 
-        <!-- Grid de Cards de Equipos -->
-        <div id="listaEquiposContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Se llena dinámicamente vía app.js -->
+        <!-- Teams grid -->
+        <div id="listaEquiposContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 grid-stagger">
+          <!-- Dynamic content -->
         </div>
 
-        <!-- Estado vacío si no hay equipos -->
-        <div id="sinEquiposMsg" class="hidden text-center py-16 bg-white rounded-xl border border-slate-200 shadow-xs">
-          <i class="bi bi-shield text-4xl text-slate-300 mb-2 block"></i>
-          <h4 class="text-base font-bold text-slate-800 mb-1">No hay clubes registrados</h4>
-          <p class="text-xs text-slate-500 mb-4">Ingresa al menos 2 equipos para poder registrar partidos.</p>
-          <button class="btnCrearPrimerEquipo px-3.5 py-2 rounded-lg bg-slate-900 text-white text-xs font-semibold">
+        <!-- Empty state -->
+        <div id="sinEquiposMsg" class="hidden text-center py-16 empty-state">
+          <i class="bi bi-shield text-4xl mb-2 block" style="color: var(--text-muted); opacity: 0.4;"></i>
+          <h4 class="text-base font-bold mb-1" style="color: var(--text-main);">No hay clubes registrados</h4>
+          <p class="text-xs mb-4" style="color: var(--text-muted);">Ingresa al menos 2 equipos para poder registrar partidos.</p>
+          <button class="btnCrearPrimerEquipo btn-action-primary text-xs mx-auto">
             + Registrar Club
           </button>
         </div>
 
       </section>
 
-      <!-- =================================================================== -->
-      <!-- TAB 4: DASHBOARD & ESTADÍSTICAS -->
-      <!-- =================================================================== -->
-      <section class="tab-pane fade" id="tab-dashboard" role="tabpanel" aria-labelledby="tab-dashboard-btn">
+      <!-- ============================================================
+           TAB 4: DASHBOARD & ESTADÍSTICAS
+      ============================================================ -->
+      <section class="tab-pane fade animate-fade-in" id="tab-dashboard" role="tabpanel" aria-labelledby="tab-dashboard-btn">
         <div id="seccion-dashboard">
-          
-          <!-- Header del Dashboard -->
+
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h2 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Estadísticas del Torneo</h2>
-              <p class="text-xs sm:text-sm text-slate-500 m-0">Rendimiento global, líderes de goleo y rachas</p>
-            </div>
-            <div>
-              <button id="btnRefrescarDashboard" class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors">
-                <i class="bi bi-arrow-repeat"></i> Actualizar
-              </button>
-            </div>
-          </div>
-
-          <!-- Tarjetas KPI Limpias y Sobrias -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            
-            <!-- Card 1: Goles Totales -->
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Goles Totales</span>
-              <div class="text-3xl font-extrabold text-slate-900 tabular-nums" id="statTotalGoles">0</div>
-              <p class="text-xs text-slate-500 mt-2 mb-0">
-                En <span class="font-semibold text-slate-700" id="statTotalPartidos">0 partidos</span> disputados
+              <h2 class="section-title text-xl sm:text-2xl font-bold tracking-tight mb-0">Estadísticas del Torneo</h2>
+              <p class="text-xs sm:text-sm mt-1 mb-0" style="color: var(--text-muted);">
+                Rendimiento global, líderes de goleo y rachas
               </p>
             </div>
-
-            <!-- Card 2: Promedio de Goles -->
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Promedio de Gol</span>
-              <div class="text-3xl font-extrabold text-slate-900 tabular-nums" id="statPromedioGoles">0.0</div>
-              <p class="text-xs text-slate-500 mt-2 mb-0">Por encuentro jugado</p>
-            </div>
-
-            <!-- Card 3: Líder de Goleo -->
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Mayor Goleador</span>
-              <div class="text-xl font-bold text-slate-900 truncate" id="statEquipoGoleador">--</div>
-              <p class="text-xs text-emerald-700 font-semibold mt-2 mb-0" id="statGolesLider">0 goles a favor</p>
-            </div>
-
-            <!-- Card 4: Mejor Defensa -->
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Mejor Defensa</span>
-              <div class="text-xl font-bold text-slate-900 truncate" id="statMejorDefensa">--</div>
-              <p class="text-xs text-slate-600 font-semibold mt-2 mb-0" id="statGolesDefensa">0 goles en contra</p>
-            </div>
-
+            <button id="btnRefrescarDashboard" class="btn-action-ghost text-xs">
+              <i class="bi bi-arrow-repeat"></i> Actualizar
+            </button>
           </div>
 
-          <!-- Gráfico Comparativo Limpio -->
-          <div class="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6 mb-6">
+          <!-- KPI Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="stat-card">
+              <span class="text-xs font-semibold uppercase tracking-wider block mb-1" style="color: var(--text-muted);">Goles Totales</span>
+              <div class="text-3xl font-extrabold tabular-nums" style="color: var(--text-main);" id="statTotalGoles">0</div>
+              <p class="text-xs mt-2 mb-0" style="color: var(--text-muted);">
+                En <span class="font-semibold" style="color: var(--text-main);" id="statTotalPartidos">0 partidos</span> disputados
+              </p>
+            </div>
+            <div class="stat-card">
+              <span class="text-xs font-semibold uppercase tracking-wider block mb-1" style="color: var(--text-muted);">Promedio de Gol</span>
+              <div class="text-3xl font-extrabold tabular-nums" style="color: var(--text-main);" id="statPromedioGoles">0.0</div>
+              <p class="text-xs mt-2 mb-0" style="color: var(--text-muted);">Por encuentro jugado</p>
+            </div>
+            <div class="stat-card">
+              <span class="text-xs font-semibold uppercase tracking-wider block mb-1" style="color: var(--text-muted);">Mayor Goleador</span>
+              <div class="text-xl font-bold truncate" style="color: var(--text-main);" id="statEquipoGoleador">--</div>
+              <p class="text-xs font-semibold mt-2 mb-0" style="color: #10b981;" id="statGolesLider">0 goles a favor</p>
+            </div>
+            <div class="stat-card">
+              <span class="text-xs font-semibold uppercase tracking-wider block mb-1" style="color: var(--text-muted);">Mejor Defensa</span>
+              <div class="text-xl font-bold truncate" style="color: var(--text-main);" id="statMejorDefensa">--</div>
+              <p class="text-xs font-semibold mt-2 mb-0" style="color: var(--text-muted);" id="statGolesDefensa">0 goles en contra</p>
+            </div>
+          </div>
+
+          <!-- Chart -->
+          <div class="app-card p-5 sm:p-6 mb-6">
             <div class="mb-4">
-              <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">
+              <h3 class="text-sm font-bold uppercase tracking-wide mb-0" style="color: var(--text-main);">
                 Goles a Favor por Club
               </h3>
-              <p class="text-xs text-slate-500 m-0">Comparación de tantos anotados en la presente temporada</p>
+              <p class="text-xs mt-1 mb-0" style="color: var(--text-muted);">Comparación de tantos anotados en la presente temporada</p>
             </div>
             <div class="relative w-full h-[300px] sm:h-[340px]">
               <canvas id="graficoGolesFavorCanvas"></canvas>
             </div>
           </div>
 
-          <!-- Rachas Recientes -->
-          <div class="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
-            <div class="mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">
+          <!-- Form streaks -->
+          <div class="app-card p-5 sm:p-6">
+            <div class="mb-4 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                 style="border-bottom: 1px solid var(--border-subtle);">
               <div>
-                <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                <h3 class="text-sm font-bold uppercase tracking-wide mb-0" style="color: var(--text-main);">
                   Forma Reciente (Últimos 5 Partidos)
                 </h3>
-                <p class="text-xs text-slate-500 m-0">Guía de resultados de cada club en sus juegos más recientes</p>
+                <p class="text-xs mt-1 mb-0" style="color: var(--text-muted);">Guía de resultados de cada club</p>
               </div>
-              <div class="flex items-center gap-3 text-xs text-slate-500">
+              <div class="flex items-center gap-3 text-xs" style="color: var(--text-muted);">
                 <span class="flex items-center gap-1"><span class="form-dot form-dot-g">G</span> Victoria</span>
                 <span class="flex items-center gap-1"><span class="form-dot form-dot-e">E</span> Empate</span>
                 <span class="flex items-center gap-1"><span class="form-dot form-dot-p">P</span> Derrota</span>
               </div>
             </div>
-            <div id="contenedorRachasDetalladas" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <!-- Renderizado dinámico vía app.js -->
+            <div id="contenedorRachasDetalladas" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 grid-stagger">
+              <!-- Dynamic content -->
             </div>
           </div>
 
@@ -583,15 +1137,15 @@
     </div>
   </main>
 
-  <!-- =================================================================== -->
-  <!-- MODAL: REGISTRAR / EDITAR EQUIPO -->
-  <!-- =================================================================== -->
+  <!-- ================================================================
+       MODAL: REGISTRAR / EDITAR EQUIPO
+  ================================================================ -->
   <div class="modal fade" id="modalEquipo" tabindex="-1" aria-labelledby="modalEquipoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content">
         <form id="formEquipo" novalidate>
           <div class="modal-header">
-            <h5 class="modal-title font-bold text-slate-900 text-base" id="modalEquipoLabel">
+            <h5 class="modal-title font-bold text-base" id="modalEquipoLabel">
               <span id="modalEquipoTitulo">Nuevo Club</span>
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -600,26 +1154,28 @@
             <input type="hidden" id="equipoId" value="">
 
             <div>
-              <label for="equipoNombre" class="block text-xs font-semibold text-slate-700 mb-1">
-                Nombre del Club <span class="text-rose-500">*</span>
+              <label for="equipoNombre" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
+                Nombre del Club <span style="color: #ef4444;">*</span>
               </label>
-              <input type="text" class="form-control" id="equipoNombre" placeholder="Ej: Sporting Cristal, Alianza Lima..." required maxlength="100">
+              <input type="text" class="form-control" id="equipoNombre"
+                     placeholder="Ej: Sporting Cristal, Alianza Lima..." required maxlength="100">
               <div class="invalid-feedback text-xs">Ingresa el nombre del club (2 a 100 caracteres).</div>
             </div>
 
             <div>
-              <label for="equipoCiudad" class="block text-xs font-semibold text-slate-700 mb-1">
-                Ciudad Sede <span class="text-rose-500">*</span>
+              <label for="equipoCiudad" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
+                Ciudad Sede <span style="color: #ef4444;">*</span>
               </label>
-              <input type="text" class="form-control" id="equipoCiudad" placeholder="Ej: Lima, Arequipa, Trujillo..." required maxlength="100">
+              <input type="text" class="form-control" id="equipoCiudad"
+                     placeholder="Ej: Lima, Arequipa, Trujillo..." required maxlength="100">
               <div class="invalid-feedback text-xs">Ingresa la ciudad sede.</div>
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors" data-bs-dismiss="modal">
-              Cancelar
-            </button>
-            <button type="submit" class="px-4 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors" id="btnGuardarEquipo">
+            <button type="button"
+                    class="btn-action-ghost text-xs"
+                    data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn-action-primary text-xs" id="btnGuardarEquipo">
               Guardar Club
             </button>
           </div>
@@ -628,15 +1184,15 @@
     </div>
   </div>
 
-  <!-- =================================================================== -->
-  <!-- MODAL: REGISTRAR / EDITAR ENCUENTRO -->
-  <!-- =================================================================== -->
+  <!-- ================================================================
+       MODAL: REGISTRAR / EDITAR ENCUENTRO
+  ================================================================ -->
   <div class="modal fade" id="modalEncuentro" tabindex="-1" aria-labelledby="modalEncuentroLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <form id="formEncuentro" novalidate>
           <div class="modal-header">
-            <h5 class="modal-title font-bold text-slate-900 text-base" id="modalEncuentroLabel">
+            <h5 class="modal-title font-bold text-base" id="modalEncuentroLabel">
               <span id="modalEncuentroTitulo">Registrar Partido</span>
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -644,51 +1200,53 @@
           <div class="modal-body p-5 space-y-4">
             <input type="hidden" id="encuentroId" value="">
 
-            <!-- Alerta dinámica si se selecciona el mismo equipo -->
-            <div id="alertaMismoEquipo" class="hidden p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-              <i class="bi bi-exclamation-circle-fill text-rose-500"></i>
+            <!-- Same-team alert -->
+            <div id="alertaMismoEquipo"
+                 class="hidden p-3 rounded-lg text-xs flex items-center gap-2"
+                 style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); color: #ef4444;">
+              <i class="bi bi-exclamation-circle-fill"></i>
               <span>Un equipo no puede enfrentarse a sí mismo. Por favor selecciona rivales distintos.</span>
             </div>
 
-            <!-- Fila de Selección de Equipos y Marcador -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-              
-              <!-- Equipo Local -->
+            <!-- Teams & Score Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl"
+                 style="background: var(--pill-bg); border: 1px solid var(--border-subtle);">
+              <!-- Local -->
               <div class="space-y-3">
-                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Equipo Local</span>
+                <span class="text-xs font-bold uppercase tracking-wider block" style="color: var(--text-main);">Equipo Local</span>
                 <div>
-                  <label for="selectEquipoLocal" class="block text-xs text-slate-500 mb-1">Club *</label>
+                  <label for="selectEquipoLocal" class="block text-xs mb-1" style="color: var(--text-muted);">Club *</label>
                   <select id="selectEquipoLocal" class="form-select text-xs sm:text-sm" required>
                     <option value="" disabled selected>Seleccione local...</option>
                   </select>
                 </div>
                 <div>
-                  <label for="golesLocal" class="block text-xs text-slate-500 mb-1">Goles *</label>
-                  <input type="number" min="0" value="0" class="form-control text-center text-lg font-bold text-slate-900" id="golesLocal" required>
+                  <label for="golesLocal" class="block text-xs mb-1" style="color: var(--text-muted);">Goles *</label>
+                  <input type="number" min="0" value="0"
+                         class="form-control text-center text-lg font-bold" id="golesLocal" required>
                 </div>
               </div>
-
-              <!-- Equipo Visitante -->
+              <!-- Visitante -->
               <div class="space-y-3">
-                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Equipo Visitante</span>
+                <span class="text-xs font-bold uppercase tracking-wider block" style="color: var(--text-main);">Equipo Visitante</span>
                 <div>
-                  <label for="selectEquipoVisitante" class="block text-xs text-slate-500 mb-1">Club *</label>
+                  <label for="selectEquipoVisitante" class="block text-xs mb-1" style="color: var(--text-muted);">Club *</label>
                   <select id="selectEquipoVisitante" class="form-select text-xs sm:text-sm" required>
                     <option value="" disabled selected>Seleccione visitante...</option>
                   </select>
                 </div>
                 <div>
-                  <label for="golesVisitante" class="block text-xs text-slate-500 mb-1">Goles *</label>
-                  <input type="number" min="0" value="0" class="form-control text-center text-lg font-bold text-slate-900" id="golesVisitante" required>
+                  <label for="golesVisitante" class="block text-xs mb-1" style="color: var(--text-muted);">Goles *</label>
+                  <input type="number" min="0" value="0"
+                         class="form-control text-center text-lg font-bold" id="golesVisitante" required>
                 </div>
               </div>
-
             </div>
 
-            <!-- Fecha del Partido -->
+            <!-- Date -->
             <div>
-              <label for="encuentroFecha" class="block text-xs font-semibold text-slate-700 mb-1">
-                Fecha del Encuentro <span class="text-rose-500">*</span>
+              <label for="encuentroFecha" class="block text-xs font-semibold mb-1" style="color: var(--text-main);">
+                Fecha del Encuentro <span style="color: #ef4444;">*</span>
               </label>
               <input type="date" class="form-control text-xs sm:text-sm" id="encuentroFecha" required>
               <div class="invalid-feedback text-xs">Por favor selecciona la fecha.</div>
@@ -696,10 +1254,8 @@
 
           </div>
           <div class="modal-footer">
-            <button type="button" class="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors" data-bs-dismiss="modal">
-              Cancelar
-            </button>
-            <button type="submit" class="px-4 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors" id="btnGuardarEncuentro">
+            <button type="button" class="btn-action-ghost text-xs" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn-action-primary text-xs" id="btnGuardarEncuentro">
               Guardar Partido
             </button>
           </div>
@@ -708,22 +1264,27 @@
     </div>
   </div>
 
-  <!-- =================================================================== -->
-  <!-- MODAL: CONFIRMACIÓN DE ELIMINACIÓN -->
-  <!-- =================================================================== -->
+  <!-- ================================================================
+       MODAL: CONFIRMACIÓN DE ELIMINACIÓN
+  ================================================================ -->
   <div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
       <div class="modal-content text-center p-5">
-        <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-600 mx-auto flex items-center justify-center text-lg mb-3 border border-rose-100">
+        <div class="w-10 h-10 rounded-full mx-auto flex items-center justify-center text-lg mb-3"
+             style="background: rgba(239,68,68,0.08); color: #ef4444; border: 1px solid rgba(239,68,68,0.2);">
           <i class="bi bi-trash3"></i>
         </div>
-        <h5 class="font-bold text-slate-900 mb-1 text-sm" id="confirmarTitulo">¿Confirmar eliminación?</h5>
-        <p class="text-xs text-slate-500 mb-4" id="confirmarMensaje">Esta acción no se puede deshacer.</p>
+        <h5 class="font-bold mb-1 text-sm" style="color: var(--text-main);" id="confirmarTitulo">¿Confirmar eliminación?</h5>
+        <p class="text-xs mb-4" style="color: var(--text-muted);" id="confirmarMensaje">Esta acción no se puede deshacer.</p>
         <div class="flex gap-2 justify-center">
-          <button type="button" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium" data-bs-dismiss="modal">
+          <button type="button" class="btn-action-ghost text-xs" data-bs-dismiss="modal">
             Cancelar
           </button>
-          <button type="button" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs" id="btnConfirmarEliminacionAccion">
+          <button type="button"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                  style="background: #dc2626; color: #fff; border: none;"
+                  id="btnConfirmarEliminacionAccion"
+                  onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
             Eliminar
           </button>
         </div>
@@ -731,24 +1292,34 @@
     </div>
   </div>
 
-  <!-- =================================================================== -->
-  <!-- BOOTSTRAP TOAST CONTAINER -->
-  <!-- =================================================================== -->
-  <div class="toast-container position-fixed bottom-0 end-0 p-4 z-50" id="toastContainer">
+  <!-- ================================================================
+       TOAST CONTAINER
+  ================================================================ -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-4 z-50" id="toastContainer"
+       style="padding-bottom: 5.5rem !important;">
   </div>
 
-  <!-- 3. Bootstrap 5 JS Bundle -->
+  <!-- ================================================================
+       WHATSAPP FLOATING BUTTON
+  ================================================================ -->
+  <a href="https://wa.me/51999999999?text=Hola!%20Quiero%20consultar%20sobre%20la%20Liga%20F%C3%BAtbol%20Torneo%202026"
+     target="_blank"
+     rel="noopener noreferrer"
+     class="wsp-fab"
+     title="Contactar por WhatsApp"
+     aria-label="Contactar por WhatsApp">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="26" height="26" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+      <path d="M12.04 2C6.494 2 2 6.484 2 12.017c0 1.866.49 3.617 1.344 5.127L2 22l4.99-1.312A10.003 10.003 0 0 0 12.04 22c5.547 0 10.04-4.484 10.04-10.017S17.587 2 12.04 2zm.014 18.17a8.302 8.302 0 0 1-4.23-1.156l-.303-.18-3.13.822.838-3.063-.2-.318a8.286 8.286 0 0 1-1.27-4.376C3.77 7.38 7.488 3.67 12.054 3.67c2.222 0 4.31.865 5.882 2.434a8.267 8.267 0 0 1 2.43 5.882c.001 4.568-3.718 8.184-8.313 8.184z"/>
+    </svg>
+  </a>
+
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- jsPDF CDN (para exportar tabla de posiciones a PDF) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
-
-  <!-- 4. Lógica Frontend ES6 Fetch API -->
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 
 </body>
 </html>

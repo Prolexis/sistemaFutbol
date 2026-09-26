@@ -2,7 +2,20 @@
  * Liga Fútbol — Frontend ES6 Application
  * Consume los endpoints REST de Spring Boot usando fetch API.
  * Gestiona Modales, Toasts, Tabla de Posiciones, Encuentros, Equipos y Estadísticas.
+ *
+ * Features added:
+ *  - Dark mode toggle (data-theme attribute + localStorage persistence)
+ *  - Scroll-aware header shadow
+ *  - Dynamic Chart.js dark mode colors
  */
+
+// =====================================================================
+// 0. DARK MODE — Initialize before DOM paint to avoid FOUC
+// =====================================================================
+(function initTheme() {
+  const saved = localStorage.getItem('liga-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
 
 // =====================================================================
 // 1. CONFIGURACIÓN Y CONSTANTES DE ENDPOINTS
@@ -91,6 +104,58 @@ document.addEventListener('DOMContentLoaded', () => {
       await cargarTodosLosDatos();
       mostrarToast('Datos actualizados', 'success');
     });
+  }
+
+  // Mobile refresh button
+  const btnRefrescarMobile = document.getElementById('btnRefrescarTodoMobile');
+  if (btnRefrescarMobile) {
+    btnRefrescarMobile.addEventListener('click', async () => {
+      mostrarToast('Sincronizando datos...', 'info');
+      await cargarTodosLosDatos();
+      mostrarToast('Datos actualizados', 'success');
+    });
+  }
+
+  // ── Dark Mode Toggle ────────────────────────────────────────────────
+  const btnToggle = document.getElementById('btnToggleDarkMode');
+  const iconDM   = document.getElementById('iconDarkMode');
+
+  function aplicarTema(tema) {
+    document.documentElement.setAttribute('data-theme', tema);
+    localStorage.setItem('liga-theme', tema);
+    if (iconDM) {
+      iconDM.className = tema === 'dark'
+        ? 'bi bi-sun-fill'
+        : 'bi bi-moon-stars-fill';
+    }
+    // Re-render chart with updated palette when theme changes
+    if (graficoGolesChartInstance && statsEquiposCache.size > 0) {
+      setTimeout(() => renderGraficoGoles(Array.from(statsEquiposCache.values())), 50);
+    }
+  }
+
+  // Apply icon on load
+  aplicarTema(localStorage.getItem('liga-theme') || 'light');
+
+  if (btnToggle) {
+    btnToggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      aplicarTema(current === 'dark' ? 'light' : 'dark');
+    });
+  }
+
+  // ── Scroll-aware header shadow ──────────────────────────────────────
+  const siteHeader = document.getElementById('siteHeader');
+  if (siteHeader) {
+    const onScroll = () => {
+      if (window.scrollY > 8) {
+        siteHeader.classList.add('scrolled');
+      } else {
+        siteHeader.classList.remove('scrolled');
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
   }
 
   // Confirmar eliminación
@@ -276,7 +341,7 @@ function renderizarTablaPosiciones(lista) {
   if (!lista || lista.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="11" class="text-center py-8 text-slate-400 text-xs">
+        <td colspan="11" class="text-center py-8 text-xs" style="color: var(--text-muted);">
           Aún no hay equipos registrados para calcular la tabla.
         </td>
       </tr>
@@ -288,58 +353,55 @@ function renderizarTablaPosiciones(lista) {
     const tr = document.createElement('tr');
     tr.className = 'transition-colors';
 
-    // Medalla sutil para los primeros 3 puestos
+    // Position badge
     let badgePosicion = '';
     if (item.posicion === 1) {
       tr.classList.add('row-oro');
-      badgePosicion = `<span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-amber-50 text-amber-700 font-bold border border-amber-200 text-xs">1</span>`;
+      badgePosicion = `<span class="inline-flex items-center justify-center w-6 h-6 rounded-md text-xs font-bold" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;">1</span>`;
     } else if (item.posicion === 2) {
       tr.classList.add('row-plata');
-      badgePosicion = `<span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200 text-xs">2</span>`;
+      badgePosicion = `<span class="inline-flex items-center justify-center w-6 h-6 rounded-md text-xs font-bold team-avatar">2</span>`;
     } else if (item.posicion === 3) {
       tr.classList.add('row-bronce');
-      badgePosicion = `<span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-orange-50 text-orange-700 font-bold border border-orange-200 text-xs">3</span>`;
+      badgePosicion = `<span class="inline-flex items-center justify-center w-6 h-6 rounded-md text-xs font-bold" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;">3</span>`;
     } else {
-      badgePosicion = `<span class="text-slate-400 font-medium text-xs">${item.posicion}</span>`;
+      badgePosicion = `<span class="text-xs font-medium" style="color:var(--text-muted);">${item.posicion}</span>`;
     }
 
-    // Diferencia de goles
-    let dgClass = 'text-slate-500 font-medium';
+    // Goal difference
+    let dgStyle = 'color:var(--text-muted);font-weight:500;';
     let dgDisplay = item.diferenciaGoles;
     if (item.diferenciaGoles > 0) {
-      dgClass = 'text-emerald-700 font-semibold';
+      dgStyle = 'color:#10b981;font-weight:600;';
       dgDisplay = `+${item.diferenciaGoles}`;
     } else if (item.diferenciaGoles < 0) {
-      dgClass = 'text-rose-600 font-semibold';
+      dgStyle = 'color:#ef4444;font-weight:600;';
     }
 
     tr.innerHTML = `
       <td class="text-center tabular-nums">${badgePosicion}</td>
-      <td class="font-bold text-slate-900 flex items-center gap-2.5">
-        <span class="w-7 h-7 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-semibold text-slate-700">
+      <td class="font-bold flex items-center gap-2.5" style="color:var(--text-main);">
+        <span class="w-7 h-7 rounded-md flex items-center justify-center text-xs font-semibold team-avatar flex-shrink-0">
           ${obtenerIniciales(item.equipoNombre)}
         </span>
-        <span class="truncate max-w-[180px] sm:max-w-none">${escapeHtml(item.equipoNombre)}</span>
+        <span class="truncate max-w-[160px] sm:max-w-none">${escapeHtml(item.equipoNombre)}</span>
       </td>
-      <td class="hidden sm:table-cell text-slate-500 text-xs">
-        ${escapeHtml(item.ciudad)}
-      </td>
-      <td class="text-center tabular-nums text-slate-600 font-medium">${item.partidosJugados}</td>
-      <td class="text-center tabular-nums text-slate-700 font-medium">${item.partidosGanados}</td>
-      <td class="text-center tabular-nums text-slate-700 font-medium">${item.partidosEmpatados}</td>
-      <td class="text-center tabular-nums text-slate-700 font-medium">${item.partidosPerdidos}</td>
-      <td class="text-center tabular-nums hidden md:table-cell text-slate-500">${item.golesAFavor}</td>
-      <td class="text-center tabular-nums hidden md:table-cell text-slate-500">${item.golesEnContra}</td>
-      <td class="text-center tabular-nums ${dgClass}">${dgDisplay}</td>
-      <td class="text-center tabular-nums text-sm font-extrabold text-slate-900">
-        <span class="inline-block px-2.5 py-0.5 rounded bg-slate-100 text-slate-900 font-bold">
-          ${item.puntos}
-        </span>
+      <td class="hidden sm:table-cell text-xs" style="color:var(--text-muted);">${escapeHtml(item.ciudad)}</td>
+      <td class="text-center tabular-nums font-medium" style="color:var(--text-main);">${item.partidosJugados}</td>
+      <td class="text-center tabular-nums font-medium" style="color:var(--text-main);">${item.partidosGanados}</td>
+      <td class="text-center tabular-nums font-medium" style="color:var(--text-muted);">${item.partidosEmpatados}</td>
+      <td class="text-center tabular-nums font-medium" style="color:var(--text-muted);">${item.partidosPerdidos}</td>
+      <td class="text-center tabular-nums hidden md:table-cell" style="color:var(--text-muted);">${item.golesAFavor}</td>
+      <td class="text-center tabular-nums hidden md:table-cell" style="color:var(--text-muted);">${item.golesEnContra}</td>
+      <td class="text-center tabular-nums" style="${dgStyle}">${dgDisplay}</td>
+      <td class="text-center tabular-nums text-sm font-extrabold">
+        <span class="pts-badge">${item.puntos}</span>
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
+
 
 /**
  * Renderiza el listado de Equipos en Cards limpias
@@ -358,34 +420,39 @@ function renderizarEquipos(lista) {
 
   lista.forEach(equipo => {
     const card = document.createElement('div');
-    card.className = 'bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-colors flex flex-col justify-between';
+    card.className = 'app-card p-4 flex flex-col justify-between animate-slide-up';
 
     card.innerHTML = `
       <div>
         <div class="flex items-start justify-between gap-3 mb-3">
-          <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-800 text-sm">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm team-avatar">
             ${obtenerIniciales(equipo.nombre)}
           </div>
-          <span class="text-[11px] text-slate-400 font-mono">
+          <span class="text-[11px] font-mono" style="color:var(--text-muted);">
             ID #${equipo.id}
           </span>
         </div>
 
-        <h3 class="text-sm sm:text-base font-bold text-slate-900 mb-0.5 truncate" title="${escapeHtml(equipo.nombre)}">
+        <h3 class="text-sm sm:text-base font-bold mb-0.5 truncate" style="color:var(--text-main);" title="${escapeHtml(equipo.nombre)}">
           ${escapeHtml(equipo.nombre)}
         </h3>
 
-        <div class="flex items-center text-xs text-slate-500 mb-3">
-          <i class="bi bi-geo-alt text-slate-400 me-1"></i>
+        <div class="flex items-center text-xs mb-3" style="color:var(--text-muted);">
+          <i class="bi bi-geo-alt me-1"></i>
           <span>${escapeHtml(equipo.ciudad)}</span>
         </div>
       </div>
 
-      <div class="pt-2.5 border-t border-slate-100 flex items-center justify-end gap-1.5">
-        <button onclick="prepararEdicionEquipo(${equipo.id})" class="px-2.5 py-1 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-colors">
+      <div class="pt-2.5 flex items-center justify-end gap-1.5" style="border-top:1px solid var(--border-subtle);">
+        <button onclick="prepararEdicionEquipo(${equipo.id})"
+                class="btn-action-ghost text-xs px-2.5 py-1">
           Editar
         </button>
-        <button onclick="confirmarEliminarEquipo(${equipo.id}, '${escapeHtml(equipo.nombre)}')" class="px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-medium transition-colors">
+        <button onclick="confirmarEliminarEquipo(${equipo.id}, '${escapeHtml(equipo.nombre)}')"
+                class="px-2.5 py-1 rounded text-xs font-medium transition-colors"
+                style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#ef4444;"
+                onmouseover="this.style.background='rgba(239,68,68,0.15)'"
+                onmouseout="this.style.background='rgba(239,68,68,0.08)'">
           Eliminar
         </button>
       </div>
@@ -393,6 +460,7 @@ function renderizarEquipos(lista) {
     container.appendChild(card);
   });
 }
+
 
 /**
  * Renderiza el listado de Encuentros disputados
@@ -411,56 +479,67 @@ function renderizarEncuentros(lista) {
 
   lista.forEach(enc => {
     const card = document.createElement('div');
-    card.className = 'bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition-colors flex flex-col justify-between';
+    card.className = 'app-card p-4 flex flex-col justify-between animate-slide-up';
 
     let localGana = enc.golesLocal > enc.golesVisitante;
     let visitanteGana = enc.golesVisitante > enc.golesLocal;
     const fechaFormateada = formatearFecha(enc.fecha);
+    const localWeight = localGana ? 'font-bold' : 'font-semibold';
+    const visitanteWeight = visitanteGana ? 'font-bold' : 'font-semibold';
+    const localColor = localGana ? 'color:var(--text-main);' : 'color:var(--text-muted);';
+    const visitanteColor = visitanteGana ? 'color:var(--text-main);' : 'color:var(--text-muted);';
 
     card.innerHTML = `
       <div>
-        <div class="flex items-center justify-between text-xs text-slate-400 mb-3 pb-2 border-b border-slate-100">
-          <span class="flex items-center gap-1.5 font-medium text-slate-500">
-            <i class="bi bi-calendar3 text-slate-400"></i> ${fechaFormateada}
+        <div class="flex items-center justify-between text-xs mb-3 pb-2"
+             style="border-bottom:1px solid var(--border-subtle); color:var(--text-muted);">
+          <span class="flex items-center gap-1.5 font-medium">
+            <i class="bi bi-calendar3"></i> ${fechaFormateada}
           </span>
-          <span class="font-mono text-[11px] text-slate-400">Partido #${enc.id}</span>
+          <span class="font-mono text-[11px]">Partido #${enc.id}</span>
         </div>
 
         <!-- Scoreboard Fixture Row -->
         <div class="flex items-center justify-between py-1 my-1">
           <!-- Local -->
           <div class="flex-1 flex items-center justify-end gap-2 text-right">
-            <span class="text-xs sm:text-sm font-semibold truncate ${localGana ? 'text-slate-900 font-bold' : 'text-slate-600'}" title="${escapeHtml(enc.equipoLocal.nombre)}">
+            <span class="text-xs sm:text-sm ${localWeight} truncate" style="${localColor}" title="${escapeHtml(enc.equipoLocal.nombre)}">
               ${escapeHtml(enc.equipoLocal.nombre)}
             </span>
-            <span class="w-6 h-6 rounded bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-bold flex-shrink-0 flex items-center justify-center">
+            <span class="w-6 h-6 rounded text-[10px] font-bold flex-shrink-0 flex items-center justify-center team-avatar">
               ${obtenerIniciales(enc.equipoLocal.nombre)}
             </span>
           </div>
 
-          <!-- Marcador Central -->
-          <div class="px-3 py-1 mx-3 rounded bg-slate-100 text-slate-900 font-bold text-sm tabular-nums tracking-wide">
+          <!-- Score -->
+          <div class="score-pill mx-3 flex-shrink-0">
             ${enc.golesLocal} &ndash; ${enc.golesVisitante}
           </div>
 
           <!-- Visitante -->
           <div class="flex-1 flex items-center justify-start gap-2 text-left">
-            <span class="w-6 h-6 rounded bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-bold flex-shrink-0 flex items-center justify-center">
+            <span class="w-6 h-6 rounded text-[10px] font-bold flex-shrink-0 flex items-center justify-center team-avatar">
               ${obtenerIniciales(enc.equipoVisitante.nombre)}
             </span>
-            <span class="text-xs sm:text-sm font-semibold truncate ${visitanteGana ? 'text-slate-900 font-bold' : 'text-slate-600'}" title="${escapeHtml(enc.equipoVisitante.nombre)}">
+            <span class="text-xs sm:text-sm ${visitanteWeight} truncate" style="${visitanteColor}" title="${escapeHtml(enc.equipoVisitante.nombre)}">
               ${escapeHtml(enc.equipoVisitante.nombre)}
             </span>
           </div>
         </div>
       </div>
 
-      <!-- Acciones -->
-      <div class="pt-2.5 mt-3 border-t border-slate-100 flex items-center justify-end gap-1.5">
-        <button onclick="prepararEdicionEncuentro(${enc.id})" class="px-2.5 py-1 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-colors">
+      <!-- Actions -->
+      <div class="pt-2.5 mt-3 flex items-center justify-end gap-1.5"
+           style="border-top:1px solid var(--border-subtle);">
+        <button onclick="prepararEdicionEncuentro(${enc.id})"
+                class="btn-action-ghost text-xs px-2.5 py-1">
           Editar
         </button>
-        <button onclick="confirmarEliminarEncuentro(${enc.id})" class="px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-medium transition-colors">
+        <button onclick="confirmarEliminarEncuentro(${enc.id})"
+                class="px-2.5 py-1 rounded text-xs font-medium transition-colors"
+                style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#ef4444;"
+                onmouseover="this.style.background='rgba(239,68,68,0.15)'"
+                onmouseout="this.style.background='rgba(239,68,68,0.08)'">
           Eliminar
         </button>
       </div>
@@ -468,6 +547,7 @@ function renderizarEncuentros(lista) {
     container.appendChild(card);
   });
 }
+
 
 /**
  * Llena selects de equipos en modales y filtros
@@ -747,32 +827,37 @@ function mostrarToast(mensaje, tipo = 'info') {
   const container = document.getElementById('toastContainer');
   if (!container) return;
 
-  let icono = 'bi-info-circle text-slate-700';
-  let borde = 'border-slate-200';
+  let iconColor = 'color:#64748b;';
+  let borderStyle = 'border-color:var(--border-subtle);';
+  let iconClass = 'bi-info-circle';
 
   if (tipo === 'success') {
-    icono = 'bi-check2-circle text-emerald-600';
-    borde = 'border-slate-200';
+    iconClass = 'bi-check2-circle';
+    iconColor = 'color:#10b981;';
   } else if (tipo === 'error') {
-    icono = 'bi-exclamation-circle text-rose-600';
-    borde = 'border-rose-200';
+    iconClass = 'bi-exclamation-circle';
+    iconColor = 'color:#ef4444;';
+    borderStyle = 'border-color:rgba(239,68,68,0.3);';
   } else if (tipo === 'warning') {
-    icono = 'bi-exclamation-triangle text-amber-600';
-    borde = 'border-amber-200';
+    iconClass = 'bi-exclamation-triangle';
+    iconColor = 'color:#f59e0b;';
+    borderStyle = 'border-color:rgba(245,158,11,0.3);';
   }
 
   const toastId = 'toast-' + Date.now();
   const toastHtml = `
-    <div id="${toastId}" class="toast align-items-center text-slate-800 bg-white border ${borde} shadow-md rounded-xl mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+    <div id="${toastId}" class="toast align-items-center shadow-md rounded-xl mb-2" role="alert" aria-live="assertive" aria-atomic="true"
+         style="background:var(--toast-bg);border:1px solid;${borderStyle}color:var(--toast-color);">
       <div class="flex items-center px-3.5 py-2.5">
-        <i class="bi ${icono} text-base me-2.5 flex-shrink-0"></i>
-        <div class="toast-body p-0 text-xs font-medium text-slate-700 flex-1">
+        <i class="bi ${iconClass} text-base me-2.5 flex-shrink-0" style="${iconColor}"></i>
+        <div class="toast-body p-0 text-xs font-medium flex-1" style="color:var(--toast-color);">
           ${escapeHtml(mensaje)}
         </div>
         <button type="button" class="btn-close btn-close-sm ms-2" data-bs-dismiss="toast" aria-label="Cerrar"></button>
       </div>
     </div>
   `;
+
 
   container.insertAdjacentHTML('beforeend', toastHtml);
   const toastEl = document.getElementById(toastId);
@@ -912,6 +997,16 @@ function renderGraficoGoles(equiposStats) {
     graficoGolesChartInstance.destroy();
   }
 
+  // Dynamic palette based on active theme
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const barGF = isDark ? '#3b82f6' : '#0f172a';
+  const barGC = isDark ? '#334155' : '#cbd5e1';
+  const gridColor = isDark ? '#1e2a3b' : '#f1f5f9';
+  const labelColor = '#64748b';
+  const tooltipBg = isDark ? '#1e293b' : '#0f172a';
+  const tooltipTitle = isDark ? '#e2e8f0' : '#ffffff';
+  const tooltipBody = isDark ? '#94a3b8' : '#e2e8f0';
+
   const ctx = canvas.getContext('2d');
   const obtenerGF = (e) => (e.GF ?? e.gf ?? e.golesAFavor ?? 0);
   const obtenerGC = (e) => (e.GC ?? e.gc ?? e.golesEnContra ?? 0);
@@ -929,14 +1024,14 @@ function renderGraficoGoles(equiposStats) {
         {
           label: 'Goles a Favor',
           data: valoresGF,
-          backgroundColor: '#0f172a', // Deep Slate
+          backgroundColor: barGF,
           borderRadius: 4,
           borderSkipped: false
         },
         {
           label: 'Goles en Contra',
           data: valoresGC,
-          backgroundColor: '#cbd5e1', // Slate 300
+          backgroundColor: barGC,
           borderRadius: 4,
           borderSkipped: false
         }
@@ -945,10 +1040,7 @@ function renderGraficoGoles(equiposStats) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false
-      },
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
           position: 'top',
@@ -956,14 +1048,14 @@ function renderGraficoGoles(equiposStats) {
           labels: {
             boxWidth: 12,
             boxHeight: 12,
-            color: '#64748b',
+            color: labelColor,
             font: { family: '"Plus Jakarta Sans", sans-serif', size: 12, weight: '500' }
           }
         },
         tooltip: {
-          backgroundColor: '#0f172a',
-          titleColor: '#ffffff',
-          bodyColor: '#e2e8f0',
+          backgroundColor: tooltipBg,
+          titleColor: tooltipTitle,
+          bodyColor: tooltipBody,
           padding: 10,
           cornerRadius: 8,
           bodyFont: { family: '"Plus Jakarta Sans", sans-serif', size: 12 }
@@ -972,17 +1064,18 @@ function renderGraficoGoles(equiposStats) {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: '#64748b', font: { family: '"Plus Jakarta Sans", sans-serif', size: 11 } }
+          ticks: { color: labelColor, font: { family: '"Plus Jakarta Sans", sans-serif', size: 11 } }
         },
         y: {
           beginAtZero: true,
-          grid: { color: '#f1f5f9' },
-          ticks: { stepSize: 1, color: '#64748b', font: { family: '"Plus Jakarta Sans", sans-serif', size: 11 } }
+          grid: { color: gridColor },
+          ticks: { stepSize: 1, color: labelColor, font: { family: '"Plus Jakarta Sans", sans-serif', size: 11 } }
         }
       }
     }
   });
 }
+
 
 function renderizarCardsRachas(listaStats) {
   const contenedor = document.getElementById('contenedorRachasDetalladas');
@@ -990,7 +1083,7 @@ function renderizarCardsRachas(listaStats) {
   contenedor.innerHTML = '';
 
   if (!listaStats || listaStats.length === 0) {
-    contenedor.innerHTML = `<div class="col-span-full text-center text-slate-400 py-6 text-xs">Sin información de clubes.</div>`;
+    contenedor.innerHTML = `<div class="col-span-full text-center py-6 text-xs" style="color:var(--text-muted);">Sin información de clubes.</div>`;
     return;
   }
 
@@ -1000,7 +1093,7 @@ function renderizarCardsRachas(listaStats) {
     const racha = item.racha || [];
     let rachaHtml = '';
     if (racha.length === 0) {
-      rachaHtml = '<span class="text-xs text-slate-400 italic">Sin partidos</span>';
+      rachaHtml = `<span class="text-xs italic" style="color:var(--text-muted);">Sin partidos</span>`;
     } else {
       rachaHtml = racha.map(res => {
         if (res === 'G') {
@@ -1014,19 +1107,19 @@ function renderizarCardsRachas(listaStats) {
     }
 
     const card = document.createElement('div');
-    card.className = 'bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 hover:border-slate-300 transition-colors';
+    card.className = 'app-card p-3.5 flex items-center justify-between gap-3 animate-slide-up';
     card.innerHTML = `
       <div class="flex items-center gap-2.5 min-w-0">
-        <span class="w-8 h-8 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-700 flex-shrink-0">
+        <span class="w-8 h-8 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 team-avatar">
           ${obtenerIniciales(item.equipoNombre)}
         </span>
         <div class="min-w-0">
-          <div class="font-bold text-slate-900 text-xs sm:text-sm truncate">
+          <div class="font-bold text-xs sm:text-sm truncate" style="color:var(--text-main);">
             ${escapeHtml(item.equipoNombre)}
           </div>
-          <div class="text-[11px] text-slate-500">
-            PJ: <span class="font-semibold text-slate-700">${item.PJ ?? item.pj ?? item.partidosJugados ?? 0}</span> &bull; 
-            PTS: <span class="font-bold text-slate-900">${item.puntos ?? 0}</span>
+          <div class="text-[11px]" style="color:var(--text-muted);">
+            PJ: <span class="font-semibold" style="color:var(--text-main);">${item.PJ ?? item.pj ?? item.partidosJugados ?? 0}</span> &bull;
+            PTS: <span class="font-bold" style="color:var(--text-main);">${item.puntos ?? 0}</span>
           </div>
         </div>
       </div>
@@ -1037,6 +1130,7 @@ function renderizarCardsRachas(listaStats) {
     contenedor.appendChild(card);
   });
 }
+
 
 // =====================================================================
 // 9. FILTRADO Y BÚSQUEDA
