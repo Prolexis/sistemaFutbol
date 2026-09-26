@@ -381,8 +381,8 @@ function renderizarTablaPosiciones(lista) {
     tr.innerHTML = `
       <td class="text-center tabular-nums">${badgePosicion}</td>
       <td class="font-bold flex items-center gap-2.5" style="color:var(--text-main);">
-        <span class="w-7 h-7 rounded-md flex items-center justify-center text-xs font-semibold team-avatar flex-shrink-0">
-          ${obtenerIniciales(item.equipoNombre)}
+        <span class="w-7 h-7 rounded-md flex-shrink-0 flex items-center justify-center overflow-hidden">
+          ${avatarEquipo(item.equipoNombre, 'w-7 h-7 rounded-md')}
         </span>
         <span class="truncate max-w-[160px] sm:max-w-none">${escapeHtml(item.equipoNombre)}</span>
       </td>
@@ -425,8 +425,8 @@ function renderizarEquipos(lista) {
     card.innerHTML = `
       <div>
         <div class="flex items-start justify-between gap-3 mb-3">
-          <div class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm team-avatar">
-            ${obtenerIniciales(equipo.nombre)}
+          <div class="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+            ${avatarEquipo(equipo.nombre, 'w-12 h-12 rounded-lg')}
           </div>
           <span class="text-[11px] font-mono" style="color:var(--text-muted);">
             ID #${equipo.id}
@@ -563,8 +563,8 @@ function renderizarEncuentros(lista) {
             <span class="text-xs sm:text-sm ${localWeight} truncate" style="${localColor}" title="${escapeHtml(enc.equipoLocal.nombre)}">
               ${escapeHtml(enc.equipoLocal.nombre)}
             </span>
-            <span class="w-6 h-6 rounded text-[10px] font-bold flex-shrink-0 flex items-center justify-center team-avatar">
-              ${obtenerIniciales(enc.equipoLocal.nombre)}
+            <span class="w-8 h-8 rounded overflow-hidden flex-shrink-0 flex items-center justify-center">
+              ${avatarEquipo(enc.equipoLocal.nombre, 'w-8 h-8 rounded')}
             </span>
           </div>
 
@@ -575,8 +575,8 @@ function renderizarEncuentros(lista) {
 
           <!-- Visitante -->
           <div class="flex-1 flex items-center justify-start gap-2 text-left">
-            <span class="w-6 h-6 rounded text-[10px] font-bold flex-shrink-0 flex items-center justify-center team-avatar">
-              ${obtenerIniciales(enc.equipoVisitante.nombre)}
+            <span class="w-8 h-8 rounded overflow-hidden flex-shrink-0 flex items-center justify-center">
+              ${avatarEquipo(enc.equipoVisitante.nombre, 'w-8 h-8 rounded')}
             </span>
             <span class="text-xs sm:text-sm ${visitanteWeight} truncate" style="${visitanteColor}" title="${escapeHtml(enc.equipoVisitante.nombre)}">
               ${escapeHtml(enc.equipoVisitante.nombre)}
@@ -1001,6 +1001,39 @@ function obtenerIniciales(nombre) {
   return (palabras[0][0] + palabras[1][0]).toUpperCase();
 }
 
+/**
+ * Mapea el nombre de un equipo a su archivo de logo.
+ * Retorna la ruta relativa del logo o null si no existe.
+ */
+function obtenerLogoEquipo(nombre) {
+  if (!nombre) return null;
+  const n = nombre.toLowerCase();
+  if (n.includes('universitario')) return '/logos/universitario.jpg';
+  if (n.includes('alianza lima'))  return '/logos/alianza_lima.jpg';
+  if (n.includes('cristal'))       return '/logos/sporting_cristal.jpg';
+  if (n.includes('melgar'))        return '/logos/melgar.jpg';
+  if (n.includes('cienciano'))     return '/logos/cienciano.jpg';
+  if (n.includes('vallejo') || n.includes('ucv')) return '/logos/ucv.jpg';
+  return null;
+}
+
+/**
+ * Genera el HTML del avatar de equipo: logo si existe, iniciales si no.
+ * @param {string} nombre - Nombre del equipo
+ * @param {string} [extraClass] - Clases CSS adicionales (size, border-radius, etc.)
+ */
+function avatarEquipo(nombre, extraClass = '') {
+  const logo = obtenerLogoEquipo(nombre);
+  const iniciales = obtenerIniciales(nombre);
+  if (logo) {
+    return `<img src="${logo}" alt="${iniciales}" title="${escapeHtml(nombre)}"
+      class="team-avatar object-contain ${extraClass}"
+      onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+    <span class="team-avatar items-center justify-center font-bold text-xs ${extraClass}" style="display:none;">${iniciales}</span>`;
+  }
+  return `<span class="team-avatar flex items-center justify-center font-bold text-xs ${extraClass}">${iniciales}</span>`;
+}
+
 function formatearFecha(fechaStr) {
   if (!fechaStr) return '';
   const [año, mes, dia] = fechaStr.split('-');
@@ -1221,8 +1254,8 @@ function renderizarCardsRachas(listaStats) {
     card.className = 'app-card p-3.5 flex items-center justify-between gap-3 animate-slide-up';
     card.innerHTML = `
       <div class="flex items-center gap-2.5 min-w-0">
-        <span class="w-8 h-8 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 team-avatar">
-          ${obtenerIniciales(item.equipoNombre)}
+        <span class="w-8 h-8 rounded-md flex-shrink-0 overflow-hidden flex items-center justify-center">
+          ${avatarEquipo(item.equipoNombre, 'w-8 h-8 rounded-md')}
         </span>
         <div class="min-w-0">
           <div class="font-bold text-xs sm:text-sm truncate" style="color:var(--text-main);">

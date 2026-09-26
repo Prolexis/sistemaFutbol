@@ -614,12 +614,17 @@
       transition: background-color var(--transition), color var(--transition);
     }
 
-    /* Team avatar initials */
+    /* Team avatar initials & images */
     .team-avatar {
       background: var(--badge-bg);
       border: 1px solid var(--border-subtle);
       color: var(--text-muted);
       transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+    }
+    img.team-avatar {
+      background: #ffffff;
+      padding: 2px;
+      object-fit: contain;
     }
 
     /* Inline label inputs in dark mode */
