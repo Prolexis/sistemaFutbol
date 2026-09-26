@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liga Futbol Pro — Sistema de Gestión de Liga</title>
+  <meta name="description" content="Sistema de Gestión de Liga de Fútbol desarrollado en Spring Boot, MySQL, Bootstrap 5 y Tailwind CSS.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
+
+  <!-- 1. Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+  <!-- Google Fonts: Outfit (modern UI) & Chakra Petch (scoreboard / match numbers) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- 2. Tailwind CSS CDN (cargado después de Bootstrap para que sus utilidades tengan prioridad) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            score: ['"Chakra Petch"', 'monospace']
+          },
+          colors: {
+            pitch: {
+              900: '#07130e',
+              800: '#0c221a',
+              700: '#113528',
+              accent: '#10b981',
+              neon: '#34d399'
+            },
+            darkbg: {
+              base: '#080d14',
+              surface: '#0f172a',
+              card: '#131e33',
+              border: '#1e293b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: #070c14;
+      color: #e2e8f0;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.06) 0%, transparent 45%);
+    }
+
+    .font-score {
+      font-family: 'Chakra Petch', monospace;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b111e;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #10b981;
+    }
+
+    /* Reset Bootstrap nav-link styling for modern dark tabs */
+    .nav-pills .nav-link {
+      color: #94a3b8;
+      border-radius: 9999px;
+      font-weight: 600;
+      padding: 0.6rem 1.4rem;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .nav-pills .nav-link:hover {
+      color: #10b981;
+      background-color: rgba(16, 185, 129, 0.08);
+    }
+    .nav-pills .nav-link.active {
+      color: #ffffff !important;
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+      box-shadow: 0 4px 20px -2px rgba(16, 185, 129, 0.4);
+    }
+
+    /* Scoreboard Table styling */
+    .scoreboard-table th {
+      background-color: #0b1322 !important;
+      color: #94a3b8 !important;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      border-bottom: 2px solid #1e293b !important;
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
+    .scoreboard-table td {
+      background-color: transparent !important;
+      color: #f1f5f9;
+      border-bottom: 1px solid #1e293b;
+      vertical-align: middle;
+      padding-top: 0.9rem;
+      padding-bottom: 0.9rem;
+    }
+    .scoreboard-table tr:hover td {
+      background-color: rgba(16, 185, 129, 0.05) !important;
+    }
+
+    /* Bootstrap Modal Dark Theme */
+    .modal-content {
+      background-color: #0f172a !important;
+      border: 1px solid #1e293b !important;
+      border-radius: 1.25rem !important;
+      color: #f8fafc !important;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+    }
+    .modal-header {
+      border-bottom: 1px solid #1e293b !important;
+    }
+    .modal-footer {
+      border-top: 1px solid #1e293b !important;
+    }
+    .form-control, .form-select {
+      background-color: #131e33 !important;
+      border: 1px solid #29384e !important;
+      color: #f8fafc !important;
+      border-radius: 0.75rem !important;
+      padding: 0.7rem 1rem !important;
+    }
+    .form-control:focus, .form-select:focus {
+      background-color: #15223a !important;
+      border-color: #10b981 !important;
+      box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.25) !important;
+      color: #ffffff !important;
+    }
+
+    /* Top positions medal ribbons */
+    .row-oro {
+      background: linear-gradient(90deg, rgba(234, 179, 8, 0.12) 0%, transparent 80%) !important;
+      border-left: 4px solid #eab308 !important;
+    }
+    .row-plata {
+      background: linear-gradient(90deg, rgba(203, 213, 225, 0.10) 0%, transparent 80%) !important;
+      border-left: 4px solid #cbd5e1 !important;
+    }
+    .row-bronce {
+      background: linear-gradient(90deg, rgba(180, 83, 9, 0.12) 0%, transparent 80%) !important;
+      border-left: 4px solid #b45309 !important;
+    }
+  </style>
+</head>
+<body class="selection:bg-emerald-500 selection:text-white">
+
+  <!-- Header / Navbar Principal -->
+  <header class="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80 shadow-lg shadow-black/40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20">
+        
+        <!-- Logo & Branding -->
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/30 flex items-center justify-center">
+            <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+              <i class="bi bi-trophy-fill text-2xl text-emerald-400"></i>
+            </div>
+          </div>
+          <div>
+            <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white m-0 flex items-center gap-2">
+              LIGA FUTBOL <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold tracking-wide">PRO 2026</span>
+            </h1>
+            <p class="text-xs text-slate-400 m-0">Gestión Integral de Campeonato & Scoreboard</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs (Bootstrap Nav Pills) -->
+        <nav>
+          <ul class="nav nav-pills bg-slate-900/90 p-1.5 rounded-full border border-slate-800" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active flex items-center gap-2 text-sm" id="tab-tabla-btn" data-bs-toggle="pill" data-bs-target="#tab-tabla" type="button" role="tab">
+                <i class="bi bi-bar-chart-line-fill"></i>
+                <span class="hidden md:inline">Tabla de</span> Posiciones
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link flex items-center gap-2 text-sm" id="tab-encuentros-btn" data-bs-toggle="pill" data-bs-target="#tab-encuentros" type="button" role="tab">
+                <i class="bi bi-calendar2-event-fill"></i>
+                <span>Encuentros</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link flex items-center gap-2 text-sm" id="tab-equipos-btn" data-bs-toggle="pill" data-bs-target="#tab-equipos" type="button" role="tab">
+                <i class="bi bi-shield-shaded"></i>
+                <span>Equipos</span>
+              </button>
+            </li>
+          </ul>
+        </nav>
+
+        <!-- Quick Refresh Button -->
+        <div class="hidden sm:block">
+          <button id="btnRefrescarTodo" class="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/60 text-slate-300 hover:text-emerald-400 transition-colors" title="Actualizar datos">
+            <i class="bi bi-arrow-clockwise text-lg"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Global Loading Spinner Overlay -->
+  <div id="loadingIndicator" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex flex-col items-center justify-center gap-3 transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div class="w-14 h-14 border-4 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin"></div>
+    <span class="text-sm font-medium text-emerald-300 tracking-wider">Cargando datos de la liga...</span>
+  </div>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="tab-content" id="mainTabsContent">
+
+      <!-- =================================================================== -->
+      <!-- TAB 1: TABLA DE POSICIONES -->
+      <!-- =================================================================== -->
+      <section class="tab-pane fade show active" id="tab-tabla" role="tabpanel" aria-labelledby="tab-tabla-btn">
+        
+        <!-- Header de la sección -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-800/80">
+          <div>
+            <div class="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
+              <i class="bi bi-award-fill"></i> Clasificación Oficial
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Tabla de Posiciones</h2>
+            <p class="text-sm text-slate-400 m-0">Cálculo en vivo: Victoria = 3 pts | Empate = 1 pto | Derrota = 0 pts</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400">
+              <i class="bi bi-info-circle me-1 text-emerald-400"></i> Criterio: Pts &rarr; DG &rarr; GF &rarr; Nombre
+            </span>
+          </div>
+        </div>
+
+        <!-- Tabla Scoreboard Container -->
+        <div class="bg-slate-900/70 backdrop-blur-md rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
+          <div class="table-responsive">
+            <table class="table scoreboard-table mb-0 w-full text-sm">
+              <thead>
+                <tr>
+                  <th class="text-center w-16">#</th>
+                  <th>Equipo</th>
+                  <th class="hidden sm:table-cell">Ciudad</th>
+                  <th class="text-center" title="Partidos Jugados">PJ</th>
+                  <th class="text-center text-emerald-400" title="Partidos Ganados">PG</th>
+                  <th class="text-center text-amber-400" title="Partidos Empatados">PE</th>
+                  <th class="text-center text-rose-400" title="Partidos Perdidos">PP</th>
+                  <th class="text-center hidden md:table-cell" title="Goles a Favor">GF</th>
+                  <th class="text-center hidden md:table-cell" title="Goles en Contra">GC</th>
+                  <th class="text-center font-bold" title="Diferencia de Goles">DG</th>
+                  <th class="text-center text-white font-black w-24">PTS</th>
+                </tr>
+              </thead>
+              <tbody id="tablaPosicionesBody">
+                <!-- Se llena dinámicamente vía app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Leyenda / Podio Informativo -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div class="bg-gradient-to-br from-yellow-500/10 to-amber-500/5 p-4 rounded-xl border border-yellow-500/30 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center justify-center text-lg font-bold">1°</div>
+            <div>
+              <div class="text-xs text-yellow-400 font-semibold uppercase tracking-wider">Campeón Directo</div>
+              <div class="text-sm text-slate-200 font-medium">Clasificación Fase de Grupos</div>
+            </div>
+          </div>
+          <div class="bg-gradient-to-br from-slate-400/10 to-slate-500/5 p-4 rounded-xl border border-slate-400/30 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-slate-400/20 text-slate-300 flex items-center justify-center text-lg font-bold">2°</div>
+            <div>
+              <div class="text-xs text-slate-300 font-semibold uppercase tracking-wider">Subcampeón</div>
+              <div class="text-sm text-slate-200 font-medium">Clasificación Previa Continental</div>
+            </div>
+          </div>
+          <div class="bg-gradient-to-br from-amber-700/15 to-orange-700/5 p-4 rounded-xl border border-amber-600/30 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-amber-600/20 text-amber-500 flex items-center justify-center text-lg font-bold">3°</div>
+            <div>
+              <div class="text-xs text-amber-500 font-semibold uppercase tracking-wider">Tercer Lugar</div>
+              <div class="text-sm text-slate-200 font-medium">Clasificación Torneo de Repechaje</div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 2: ENCUENTROS -->
+      <!-- =================================================================== -->
+      <section class="tab-pane fade" id="tab-encuentros" role="tabpanel" aria-labelledby="tab-encuentros-btn">
+        
+        <!-- Header de la sección -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-800/80">
+          <div>
+            <div class="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
+              <i class="bi bi-clock-history"></i> Calendario y Resultados
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Encuentros de la Liga</h2>
+            <p class="text-sm text-slate-400 m-0">Registro y actualización de partidos disputados</p>
+          </div>
+          <div>
+            <button id="btnAbrirModalEncuentro" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition-all hover:scale-105">
+              <i class="bi bi-plus-circle-fill text-lg"></i>
+              <span>Registrar Encuentro</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Grid de Encuentros -->
+        <div id="listaEncuentrosContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- Se llena dinámicamente vía app.js -->
+        </div>
+
+        <!-- Estado vacío si no hay encuentros -->
+        <div id="sinEncuentrosMsg" class="hidden text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800">
+          <i class="bi bi-calendar-x text-5xl text-slate-600 mb-3 block"></i>
+          <h4 class="text-lg font-bold text-slate-300">No hay encuentros registrados</h4>
+          <p class="text-sm text-slate-500 mb-4">Comienza registrando el primer partido de la temporada.</p>
+          <button class="btnRegistrarPrimerEncuentro px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">
+            + Registrar Encuentro Ahora
+          </button>
+        </div>
+
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 3: EQUIPOS -->
+      <!-- =================================================================== -->
+      <section class="tab-pane fade" id="tab-equipos" role="tabpanel" aria-labelledby="tab-equipos-btn">
+        
+        <!-- Header de la sección -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-800/80">
+          <div>
+            <div class="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
+              <i class="bi bi-shield-check"></i> Clubes Participantes
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Equipos Registrados</h2>
+            <p class="text-sm text-slate-400 m-0">Gestiona los clubes que forman parte de la competencia</p>
+          </div>
+          <div>
+            <button id="btnAbrirModalEquipo" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition-all hover:scale-105">
+              <i class="bi bi-plus-circle-fill text-lg"></i>
+              <span>Nuevo Equipo</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Grid de Cards de Equipos -->
+        <div id="listaEquiposContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <!-- Se llena dinámicamente vía app.js -->
+        </div>
+
+        <!-- Estado vacío si no hay equipos -->
+        <div id="sinEquiposMsg" class="hidden text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800">
+          <i class="bi bi-shield-slash text-5xl text-slate-600 mb-3 block"></i>
+          <h4 class="text-lg font-bold text-slate-300">No hay equipos registrados</h4>
+          <p class="text-sm text-slate-500 mb-4">Ingresa al menos 2 equipos para poder registrar encuentros.</p>
+          <button class="btnCrearPrimerEquipo px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold">
+            + Crear Primer Equipo
+          </button>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- =================================================================== -->
+  <!-- MODAL: REGISTRAR / EDITAR EQUIPO -->
+  <!-- =================================================================== -->
+  <div class="modal fade" id="modalEquipo" tabindex="-1" aria-labelledby="modalEquipoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="formEquipo" novalidate>
+          <div class="modal-header">
+            <h5 class="modal-title font-bold flex items-center gap-2 text-white" id="modalEquipoLabel">
+              <i class="bi bi-shield-plus text-emerald-400"></i>
+              <span id="modalEquipoTitulo">Nuevo Equipo</span>
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body p-4 space-y-4">
+            <input type="hidden" id="equipoId" value="">
+
+            <div>
+              <label for="equipoNombre" class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">
+                Nombre del Club <span class="text-rose-400">*</span>
+              </label>
+              <input type="text" class="form-control" id="equipoNombre" placeholder="Ej: Alianza Lima, Real Madrid..." required maxlength="100">
+              <div class="invalid-feedback text-xs">Por favor ingresa el nombre del equipo (2 a 100 caracteres).</div>
+            </div>
+
+            <div>
+              <label for="equipoCiudad" class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">
+                Ciudad Sede <span class="text-rose-400">*</span>
+              </label>
+              <input type="text" class="form-control" id="equipoCiudad" placeholder="Ej: Lima, Madrid, Buenos Aires..." required maxlength="100">
+              <div class="invalid-feedback text-xs">Por favor ingresa la ciudad sede.</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors" data-bs-dismiss="modal">
+              Cancelar
+            </button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow-lg shadow-emerald-600/30 transition-all" id="btnGuardarEquipo">
+              Guardar Equipo
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- MODAL: REGISTRAR / EDITAR ENCUENTRO -->
+  <!-- =================================================================== -->
+  <div class="modal fade" id="modalEncuentro" tabindex="-1" aria-labelledby="modalEncuentroLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <form id="formEncuentro" novalidate>
+          <div class="modal-header">
+            <h5 class="modal-title font-bold flex items-center gap-2 text-white" id="modalEncuentroLabel">
+              <i class="bi bi-calendar2-plus text-emerald-400"></i>
+              <span id="modalEncuentroTitulo">Registrar Encuentro</span>
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body p-4 sm:p-6 space-y-4">
+            <input type="hidden" id="encuentroId" value="">
+
+            <!-- Alerta dinámica si se selecciona el mismo equipo -->
+            <div id="alertaMismoEquipo" class="hidden p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+              <i class="bi bi-exclamation-triangle-fill text-rose-400"></i>
+              <span><strong>Regla de Negocio:</strong> Un equipo no puede enfrentarse a sí mismo. Selecciona dos equipos diferentes.</span>
+            </div>
+
+            <!-- Fila de Selección de Equipos y Marcador -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+              
+              <!-- Equipo Local -->
+              <div class="space-y-3">
+                <div class="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  Equipo Local
+                </div>
+                <div>
+                  <label for="selectEquipoLocal" class="block text-xs font-medium text-slate-400 mb-1">Club Local *</label>
+                  <select id="selectEquipoLocal" class="form-select" required>
+                    <option value="" disabled selected>Seleccione equipo local...</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="golesLocal" class="block text-xs font-medium text-slate-400 mb-1">Goles Local *</label>
+                  <input type="number" min="0" value="0" class="form-control text-center font-score text-xl font-bold text-emerald-400" id="golesLocal" required>
+                </div>
+              </div>
+
+              <!-- Equipo Visitante -->
+              <div class="space-y-3">
+                <div class="flex items-center gap-2 text-teal-400 text-xs font-bold uppercase">
+                  <span class="w-2 h-2 rounded-full bg-teal-400"></span>
+                  Equipo Visitante
+                </div>
+                <div>
+                  <label for="selectEquipoVisitante" class="block text-xs font-medium text-slate-400 mb-1">Club Visitante *</label>
+                  <select id="selectEquipoVisitante" class="form-select" required>
+                    <option value="" disabled selected>Seleccione equipo visitante...</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="golesVisitante" class="block text-xs font-medium text-slate-400 mb-1">Goles Visitante *</label>
+                  <input type="number" min="0" value="0" class="form-control text-center font-score text-xl font-bold text-teal-400" id="golesVisitante" required>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Fecha del Partido -->
+            <div>
+              <label for="encuentroFecha" class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">
+                Fecha del Encuentro <span class="text-rose-400">*</span>
+              </label>
+              <input type="date" class="form-control" id="encuentroFecha" required>
+              <div class="invalid-feedback text-xs">Por favor selecciona la fecha del partido.</div>
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors" data-bs-dismiss="modal">
+              Cancelar
+            </button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow-lg shadow-emerald-600/30 transition-all" id="btnGuardarEncuentro">
+              Guardar Encuentro
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- MODAL: CONFIRMACIÓN DE ELIMINACIÓN -->
+  <!-- =================================================================== -->
+  <div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content text-center p-4">
+        <div class="w-14 h-14 rounded-full bg-rose-500/10 text-rose-400 mx-auto flex items-center justify-center text-2xl mb-3">
+          <i class="bi bi-trash3-fill"></i>
+        </div>
+        <h5 class="font-bold text-white mb-2" id="confirmarTitulo">¿Confirmar Eliminación?</h5>
+        <p class="text-xs text-slate-400 mb-4" id="confirmarMensaje">Esta acción no se puede deshacer.</p>
+        <div class="flex gap-2 justify-center">
+          <button type="button" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium" data-bs-dismiss="modal">
+            Cancelar
+          </button>
+          <button type="button" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold" id="btnConfirmarEliminacionAccion">
+            Eliminar Definitivamente
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- BOOTSTRAP TOAST CONTAINER (FEEDBACK VISUAL FLOTANTE) -->
+  <!-- =================================================================== -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-4 z-50" id="toastContainer">
+    <!-- Template Toast Dinámico -->
+  </div>
+
+  <!-- 3. Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- 4. Lógica Frontend ES6 Fetch API -->
+  <script src="app.js"></script>
+
+</body>
+</html>
